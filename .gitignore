@@ -1,0 +1,8 @@
+.build/
+.swiftpm/
+build/
+*.xcodeproj/
+DerivedData/
+NotchBar.app/
+NotchBar.zip
+.DS_Store
