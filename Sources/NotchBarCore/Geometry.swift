@@ -3,7 +3,7 @@ import Foundation
 /// A display, described in global Quartz coordinates (origin at the top-left
 /// of the primary display, y grows downward) — the same space Accessibility
 /// reports `AXPosition` in.
-public struct ScreenInfo: Equatable {
+public struct ScreenInfo: Equatable, Sendable {
     public var frame: CGRect
     /// The area covered by the camera housing, if the display has one.
     public var notch: CGRect?
@@ -14,8 +14,8 @@ public struct ScreenInfo: Equatable {
     }
 }
 
-public enum ItemVisibility: Int, Comparable {
-    /// Behind the notch, or pushed left of it where app menus cover it.
+public enum ItemVisibility: Int, Comparable, Sendable {
+    /// Behind the notch, or left of it where the frontmost app's menus cover it.
     case hiddenByNotch
     /// Not (mostly) on any screen.
     case offscreen
@@ -23,9 +23,28 @@ public enum ItemVisibility: Int, Comparable {
     /// The item did not report a frame.
     case unknown
 
-    public var isHidden: Bool { self == .hiddenByNotch || self == .offscreen }
+    public var isHidden: Bool { section == .hidden }
+
+    public var section: ItemSection {
+        switch self {
+        case .hiddenByNotch, .offscreen: return .hidden
+        case .visible: return .visible
+        case .unknown: return .unknown
+        }
+    }
 
     public static func < (lhs: ItemVisibility, rhs: ItemVisibility) -> Bool {
+        lhs.rawValue < rhs.rawValue
+    }
+}
+
+/// The menu section an item is listed under, in menu order.
+public enum ItemSection: Int, Comparable, Sendable {
+    case hidden
+    case visible
+    case unknown
+
+    public static func < (lhs: ItemSection, rhs: ItemSection) -> Bool {
         lhs.rawValue < rhs.rawValue
     }
 }
@@ -63,19 +82,34 @@ public enum Geometry {
     }
 
     /// Classifies a menu bar item frame (Quartz coordinates).
-    public static func visibility(of frame: CGRect?, screens: [ScreenInfo],
+    ///
+    /// `appMenus` is the extent of the frontmost app's menus (Apple menu
+    /// through its last menu), if it could be read.
+    public static func visibility(of frame: CGRect?, screens: [ScreenInfo], appMenus: CGRect? = nil,
                                   minimumVisibleFraction: CGFloat = 0.5) -> ItemVisibility {
         guard let frame else { return .unknown }
         guard frame.width > 0, frame.height > 0 else { return .offscreen }
 
+        // App menus start at the left edge of the screen they're on, and every
+        // menu bar shows the same menus, so their width carries across screens.
+        let menuWidth = appMenus.flatMap { menus in
+            screens.first { $0.frame.contains(CGPoint(x: menus.minX, y: menus.midY)) }
+                .map { menus.maxX - $0.frame.minX }
+        }
+
         // On a notched display, status items are laid out right-to-left. Once
-        // they run out of room they continue under the notch and then to its
-        // left, where the frontmost app's menus win. Either way: hidden.
+        // they run out of room they continue under the notch, and then to its
+        // left, where the frontmost app's menus are drawn over them.
         for screen in screens {
-            guard let notch = screen.notch, frame.intersects(screen.frame) else { continue }
-            let inTopRow = frame.minY < notch.maxY
-            if inTopRow && frame.minX < notch.maxX - 1 {
+            guard let notch = screen.notch, frame.intersects(screen.frame),
+                  frame.minY < notch.maxY else { continue }
+            if frame.minX < notch.maxX - 1 && frame.maxX > notch.minX + 1 {
                 return .hiddenByNotch
+            }
+            if frame.maxX <= notch.minX + 1 {
+                // Without the menus' extent, assume they cover it.
+                guard let menuWidth else { return .hiddenByNotch }
+                if frame.minX < screen.frame.minX + menuWidth - 1 { return .hiddenByNotch }
             }
         }
 

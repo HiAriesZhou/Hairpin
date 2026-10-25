@@ -72,8 +72,53 @@ final class GeometryTests: XCTestCase {
         XCTAssertEqual(Geometry.visibility(of: CGRect(x: 700, y: 0, width: 24, height: 32), screens: [builtIn]), .hiddenByNotch)
     }
 
-    func testItemLeftOfNotchIsHidden() {
+    func testItemLeftOfNotchIsHiddenWhenAppMenusAreUnknown() {
         XCTAssertEqual(Geometry.visibility(of: CGRect(x: 400, y: 0, width: 24, height: 32), screens: [builtIn]), .hiddenByNotch)
+    }
+
+    func testItemLeftOfNotchPastShortAppMenusIsVisible() {
+        let menus = CGRect(x: 0, y: 0, width: 300, height: 32)
+        XCTAssertEqual(Geometry.visibility(of: CGRect(x: 400, y: 0, width: 24, height: 32), screens: [builtIn],
+                                           appMenus: menus), .visible)
+        XCTAssertEqual(Geometry.visibility(of: CGRect(x: 300, y: 0, width: 24, height: 32), screens: [builtIn],
+                                           appMenus: menus), .visible)
+    }
+
+    func testItemLeftOfNotchCoveredByAppMenusIsHidden() {
+        let menus = CGRect(x: 0, y: 0, width: 300, height: 32)
+        XCTAssertEqual(Geometry.visibility(of: CGRect(x: 250, y: 0, width: 24, height: 32), screens: [builtIn],
+                                           appMenus: menus), .hiddenByNotch)
+        XCTAssertEqual(Geometry.visibility(of: CGRect(x: 290, y: 0, width: 24, height: 32), screens: [builtIn],
+                                           appMenus: menus), .hiddenByNotch)
+    }
+
+    func testShortAppMenusDontUncoverTheNotch() {
+        let menus = CGRect(x: 0, y: 0, width: 300, height: 32)
+        XCTAssertEqual(Geometry.visibility(of: CGRect(x: 700, y: 0, width: 24, height: 32), screens: [builtIn],
+                                           appMenus: menus), .hiddenByNotch)
+    }
+
+    func testAppMenusPastTheNotchCoverEverythingLeftOfIt() {
+        let menus = CGRect(x: 0, y: 0, width: 1000, height: 32)
+        XCTAssertEqual(Geometry.visibility(of: CGRect(x: 600, y: 0, width: 24, height: 32), screens: [builtIn],
+                                           appMenus: menus), .hiddenByNotch)
+        XCTAssertEqual(Geometry.visibility(of: CGRect(x: 1200, y: 0, width: 24, height: 32), screens: [builtIn],
+                                           appMenus: menus), .visible)
+    }
+
+    func testAppMenusReadOnAnotherScreenKeepTheirWidth() {
+        let external = ScreenInfo(frame: CGRect(x: -1920, y: 0, width: 1920, height: 1080))
+        let menus = CGRect(x: -1920, y: 0, width: 300, height: 24)
+        XCTAssertEqual(Geometry.visibility(of: CGRect(x: 400, y: 0, width: 24, height: 32), screens: [external, builtIn],
+                                           appMenus: menus), .visible)
+        XCTAssertEqual(Geometry.visibility(of: CGRect(x: 250, y: 0, width: 24, height: 32), screens: [external, builtIn],
+                                           appMenus: menus), .hiddenByNotch)
+    }
+
+    func testAppMenusOffEveryScreenCountAsUnknown() {
+        let menus = CGRect(x: 5000, y: 0, width: 300, height: 32)
+        XCTAssertEqual(Geometry.visibility(of: CGRect(x: 400, y: 0, width: 24, height: 32), screens: [builtIn],
+                                           appMenus: menus), .hiddenByNotch)
     }
 
     func testLeftOfCenterIsVisibleWithoutNotch() {
@@ -105,6 +150,15 @@ final class GeometryTests: XCTestCase {
         XCTAssertFalse(ItemVisibility.unknown.isHidden)
         XCTAssertTrue(ItemVisibility.offscreen.isHidden)
         XCTAssertTrue(ItemVisibility.hiddenByNotch.isHidden)
+    }
+
+    func testSections() {
+        XCTAssertEqual(ItemVisibility.hiddenByNotch.section, .hidden)
+        XCTAssertEqual(ItemVisibility.offscreen.section, .hidden)
+        XCTAssertEqual(ItemVisibility.visible.section, .visible)
+        XCTAssertEqual(ItemVisibility.unknown.section, .unknown)
+        XCTAssertLessThan(ItemSection.hidden, .visible)
+        XCTAssertLessThan(ItemSection.visible, .unknown)
     }
 }
 
@@ -147,6 +201,17 @@ final class ExtraListTests: XCTestCase {
         let sorted = ExtraList.classifyAndSort(items, screens: [builtIn])
         XCTAssertEqual(sorted.map(\.id), ["offscreen", "leftOfNotch", "underNotch", "visible1", "visible2", "unknown"])
         XCTAssertEqual(sorted.map(\.visibility), [.offscreen, .hiddenByNotch, .hiddenByNotch, .visible, .visible, .unknown])
+    }
+
+    func testSortUsesAppMenusLeftOfNotch() {
+        let items = [
+            item("visible", x: 1000),
+            item("gap", x: 500),
+            item("covered", x: 100),
+        ]
+        let sorted = ExtraList.classifyAndSort(items, screens: [builtIn], appMenus: CGRect(x: 0, y: 0, width: 300, height: 32))
+        XCTAssertEqual(sorted.map(\.id), ["covered", "gap", "visible"])
+        XCTAssertEqual(sorted.map(\.visibility.section), [.hidden, .visible, .visible])
     }
 
     func testSortTieBreaksByNameThenID() {

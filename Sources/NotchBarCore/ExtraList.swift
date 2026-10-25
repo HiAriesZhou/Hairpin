@@ -1,7 +1,7 @@
 import Foundation
 
 /// A menu bar extra (status item) of some app, as read via Accessibility.
-public struct ExtraItem: Equatable, Identifiable {
+public struct ExtraItem: Equatable, Identifiable, Sendable {
     public var id: String
     public var pid: Int32
     public var appName: String
@@ -32,7 +32,7 @@ public struct ExtraItem: Equatable, Identifiable {
     }
 }
 
-public struct ClassifiedItem: Equatable, Identifiable {
+public struct ClassifiedItem: Equatable, Identifiable, Sendable {
     public var item: ExtraItem
     public var visibility: ItemVisibility
     public var id: String { item.id }
@@ -69,18 +69,20 @@ public enum ExtraList {
         }
     }
 
-    /// Classifies items and orders them: hidden first, then visible, then
-    /// unknown. Within a group, left-to-right as on the menu bar, then by name.
-    public static func classifyAndSort(_ items: [ExtraItem], screens: [ScreenInfo]) -> [ClassifiedItem] {
+    /// Classifies items and orders them by section: hidden, visible, unknown.
+    /// Within a section, left-to-right as on the menu bar, then by name.
+    public static func classifyAndSort(_ items: [ExtraItem], screens: [ScreenInfo],
+                                       appMenus: CGRect? = nil) -> [ClassifiedItem] {
         items
-            .map { ClassifiedItem(item: $0, visibility: Geometry.visibility(of: $0.frame, screens: screens)) }
+            .map { ClassifiedItem(item: $0, visibility: Geometry.visibility(of: $0.frame, screens: screens,
+                                                                            appMenus: appMenus)) }
             .sorted(by: precedes)
     }
 
     static func precedes(_ a: ClassifiedItem, _ b: ClassifiedItem) -> Bool {
-        let groupA = a.visibility.isHidden ? 0 : (a.visibility == .visible ? 1 : 2)
-        let groupB = b.visibility.isHidden ? 0 : (b.visibility == .visible ? 1 : 2)
-        if groupA != groupB { return groupA < groupB }
+        let sectionA = a.visibility.section
+        let sectionB = b.visibility.section
+        if sectionA != sectionB { return sectionA < sectionB }
         let xA = a.item.frame?.minX ?? .greatestFiniteMagnitude
         let xB = b.item.frame?.minX ?? .greatestFiniteMagnitude
         if xA != xB { return xA < xB }
