@@ -24,6 +24,10 @@ jobs:
           xcodebuild -version
           swift --version
 
+      # The test target doesn't depend on the app, so build it explicitly.
+      - name: Build
+        run: swift build
+
       - name: Test
         run: swift test
 

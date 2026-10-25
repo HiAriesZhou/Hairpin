@@ -7,11 +7,30 @@ cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
 APP="$ROOT/NotchBar.app"
 ZIP="$ROOT/NotchBar.zip"
-VERSION="${VERSION:-$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || true)}"
+# Version: $VERSION if set, else a tag on HEAD itself (vX.Y.Z), else 0.0.0.
+# A pre-release or build suffix (-rc.1, +meta) is dropped, since
+# CFBundleShortVersionString takes numbers only.
+if [[ -z "${VERSION:-}" ]]; then
+  VERSION="$(git describe --tags --exact-match HEAD 2>/dev/null || true)"
+  VERSION="${VERSION#v}"
+fi
 VERSION="${VERSION:-0.0.0}"
+VERSION="${VERSION%%[-+]*}"
 BUILD_NUMBER="${BUILD_NUMBER:-$(git rev-list --count HEAD 2>/dev/null || echo 1)}"
+COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 
-echo "==> swift build -c release (version $VERSION, build $BUILD_NUMBER)"
+# Both end up inside the Info.plist XML below, so accept numbers only.
+version_re='^[0-9]+(\.[0-9]+){0,2}$'
+if [[ ! "$VERSION" =~ $version_re ]]; then
+  echo "error: VERSION '$VERSION' is not 1-3 dot-separated numbers" >&2
+  exit 1
+fi
+if [[ ! "$BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
+  echo "error: BUILD_NUMBER '$BUILD_NUMBER' is not a number" >&2
+  exit 1
+fi
+
+echo "==> swift build -c release (version $VERSION, build $BUILD_NUMBER, commit $COMMIT)"
 swift build -c release
 BIN_DIR="$(swift build -c release --show-bin-path)"
 
@@ -19,6 +38,7 @@ echo "==> Assembling $APP"
 rm -rf "$APP" "$ZIP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/NotchBar" "$APP/Contents/MacOS/NotchBar"
+cp "$ROOT/LICENSE" "$APP/Contents/Resources/LICENSE"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
