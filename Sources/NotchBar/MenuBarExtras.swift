@@ -3,43 +3,63 @@ import ApplicationServices
 import NotchBarCore
 
 /// An extra read from another app, plus the live element to press.
-struct LiveExtra {
+///
+/// `@unchecked`: `AXUIElement` isn't annotated `Sendable`, but CF reference
+/// counting is thread-safe and the element is only ever handed to AX calls.
+struct LiveExtra: @unchecked Sendable {
     let item: ExtraItem
     let element: AXUIElement
 }
 
+/// A running app, captured on the main thread for a background scan.
+struct RunningApp: Sendable {
+    let pid: pid_t
+    let name: String
+    let bundleID: String?
+}
+
 /// Reads and presses other apps' menu bar extras via the Accessibility API.
 enum MenuBarExtras {
-    /// Per-app messaging timeout so a hung app can't stall the menu.
+    /// Messaging timeout for every element we read. It applies per element,
+    /// so it is set on each one before it is messaged.
     private static let readTimeout: Float = 0.25
     private static let pressTimeout: Float = 1.0
 
     static var isTrusted: Bool { AXIsProcessTrusted() }
 
-    /// Enumerates the extras of every running app except our own.
-    /// Reads NSRunningApplication on the main thread; the Accessibility
-    /// queries themselves run concurrently.
-    @MainActor
-    static func all() -> [LiveExtra] {
-        let ownPID = ProcessInfo.processInfo.processIdentifier
-        let apps: [(pid: pid_t, name: String, bundleID: String?)] = NSWorkspace.shared.runningApplications
-            .filter { $0.processIdentifier > 0 && $0.processIdentifier != ownPID && !$0.isTerminated }
-            .map { ($0.processIdentifier, $0.localizedName ?? $0.bundleIdentifier ?? "PID \($0.processIdentifier)", $0.bundleIdentifier) }
-
-        return query(apps)
+    struct Scan: Sendable {
+        var extras: [LiveExtra]
+        /// Union of the menu bar owner's menu frames (Quartz), if readable.
+        var appMenus: CGRect?
     }
 
-    /// Kept off the main actor: the closure below runs on worker threads.
-    private static func query(_ apps: [(pid: pid_t, name: String, bundleID: String?)]) -> [LiveExtra] {
+    /// Every running app except our own.
+    @MainActor
+    static func runningApps() -> [RunningApp] {
+        let ownPID = ProcessInfo.processInfo.processIdentifier
+        return NSWorkspace.shared.runningApplications
+            .filter { $0.processIdentifier > 0 && $0.processIdentifier != ownPID && !$0.isTerminated }
+            .map { RunningApp(pid: $0.processIdentifier,
+                              name: $0.localizedName ?? $0.bundleIdentifier ?? "PID \($0.processIdentifier)",
+                              bundleID: $0.bundleIdentifier) }
+    }
+
+    /// Reads every app's extras, plus the menus of the app that owns the menu
+    /// bar. Blocks on Accessibility round trips, so never call it on the main
+    /// thread.
+    static func scan(_ apps: [RunningApp], menuBarOwner: pid_t?) -> Scan {
         let results = Collector()
         DispatchQueue.concurrentPerform(iterations: apps.count) { index in
-            let app = apps[index]
-            results.append(extras(pid: app.pid, appName: app.name, bundleID: app.bundleID))
+            results.append(extras(of: apps[index]))
         }
-        return results.items
+        let ownPID = ProcessInfo.processInfo.processIdentifier
+        let menus = menuBarOwner.flatMap { $0 == ownPID ? nil : menuFrame(pid: $0) }
+        return Scan(extras: results.items, appMenus: menus)
     }
 
-    private final class Collector {
+    /// `@unchecked`: all access to `items` goes through `lock`, except the
+    /// read after `concurrentPerform` has returned.
+    private final class Collector: @unchecked Sendable {
         private let lock = NSLock()
         private(set) var items: [LiveExtra] = []
 
@@ -51,19 +71,20 @@ enum MenuBarExtras {
         }
     }
 
-    private static func extras(pid: pid_t, appName: String, bundleID: String?) -> [LiveExtra] {
-        let app = AXUIElementCreateApplication(pid)
-        AXUIElementSetMessagingTimeout(app, readTimeout)
-        guard let bar = element(app, "AXExtrasMenuBar"),
-              let children = attribute(bar, "AXChildren") as? [AXUIElement] else { return [] }
+    private static func extras(of app: RunningApp) -> [LiveExtra] {
+        let root = AXUIElementCreateApplication(app.pid)
+        AXUIElementSetMessagingTimeout(root, readTimeout)
+        guard let bar = element(root, "AXExtrasMenuBar") else { return [] }
+        AXUIElementSetMessagingTimeout(bar, readTimeout)
+        guard let children = attribute(bar, "AXChildren") as? [AXUIElement] else { return [] }
 
         return children.enumerated().map { index, child in
             AXUIElementSetMessagingTimeout(child, readTimeout)
             let item = ExtraItem(
-                id: "\(pid)-\(index)",
-                pid: pid,
-                appName: appName,
-                bundleID: bundleID,
+                id: "\(app.pid)-\(index)",
+                pid: app.pid,
+                appName: app.name,
+                bundleID: app.bundleID,
                 role: string(child, "AXRole"),
                 title: string(child, "AXTitle"),
                 detail: string(child, "AXDescription"),
@@ -74,9 +95,26 @@ enum MenuBarExtras {
         }
     }
 
+    /// The span of an app's menus in the menu bar, Apple menu included.
+    private static func menuFrame(pid: pid_t) -> CGRect? {
+        let root = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(root, readTimeout)
+        guard let bar = element(root, "AXMenuBar") else { return nil }
+        AXUIElementSetMessagingTimeout(bar, readTimeout)
+        guard let children = attribute(bar, "AXChildren") as? [AXUIElement] else { return nil }
+
+        let frames = children.compactMap { child -> CGRect? in
+            AXUIElementSetMessagingTimeout(child, readTimeout)
+            return frame(child)
+        }.filter { $0.width > 0 && $0.height > 0 }
+        guard let first = frames.first else { return nil }
+        return frames.dropFirst().reduce(first) { $0.union($1) }
+    }
+
     /// Opens the extra's menu: AXPress, falling back to AXShowMenu.
     /// Blocks until the target app answers, so call it off the main thread.
-    static func open(_ element: AXUIElement) {
+    static func open(_ extra: LiveExtra) {
+        let element = extra.element
         AXUIElementSetMessagingTimeout(element, pressTimeout)
         let actions = actionNames(element)
         if actions.isEmpty || actions.contains("AXPress") {

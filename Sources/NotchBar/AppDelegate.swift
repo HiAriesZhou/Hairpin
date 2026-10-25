@@ -7,14 +7,28 @@ import ServiceManagement
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private let menu = NSMenu()
-    /// Elements behind the entries of the currently built menu, by item id.
-    private var elements: [String: AXUIElement] = [:]
+    private var isMenuOpen = false
 
-    private static let accessibilitySettingsURL =
-        URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+    /// The latest finished scan. The menu is built only from this, so opening
+    /// it never waits on another app; nil until the first scan finishes.
+    private var entries: [ClassifiedItem]?
+    /// The extras behind `entries`, by item id.
+    private var extras: [String: LiveExtra] = [:]
+    private var isScanning = false
+    private var scanAgain = false
+    private let scanQueue = DispatchQueue(label: "com.hiarieszhou.notchbar.scan", qos: .userInitiated)
+
+    private static let autosaveName = "NotchBar"
+    /// The macOS 13+ Privacy & Security pane first, the legacy pane id second.
+    private static let accessibilitySettingsURLs = [
+        URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility")!,
+        URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!,
+    ]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        requestRightmostPosition()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem.autosaveName = Self.autosaveName
         if let button = statusItem.button {
             let image = NSImage(systemSymbolName: "menubar.arrow.up.rectangle", accessibilityDescription: "NotchBar")
                 ?? NSImage(systemSymbolName: "ellipsis.circle", accessibilityDescription: "NotchBar")
@@ -30,17 +44,102 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.autoenablesItems = false
         statusItem.menu = menu
 
-        if !MenuBarExtras.isTrusted {
+        // Keep the snapshot fresh so the menu rarely has to update while open.
+        let workspace = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.didLaunchApplicationNotification,
+                     NSWorkspace.didTerminateApplicationNotification,
+                     NSWorkspace.didActivateApplicationNotification] {
+            workspace.addObserver(self, selector: #selector(environmentChanged(_:)), name: name, object: nil)
+        }
+        NotificationCenter.default.addObserver(self, selector: #selector(environmentChanged(_:)),
+                                               name: NSApplication.didChangeScreenParametersNotification, object: nil)
+
+        if MenuBarExtras.isTrusted {
+            refresh()
+        } else {
             // The menu is rebuilt on every open, so it picks up the grant by itself.
             showAccessibilityAlert()
+        }
+    }
+
+    /// Opening NotchBar.app again (Finder, Spotlight, Launchpad) while it runs
+    /// shows the list at the pointer: a way in if our own icon is hidden.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        Task {
+            _ = self.menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+        }
+        return false
+    }
+
+    /// Overflowing status items are dropped from the left end of the row, so
+    /// the slot next to the system items is the last to go behind the notch.
+    /// On first launch, ask for it through the undocumented default AppKit
+    /// keeps ⌘-drag positions in (distance from the right edge). Once the
+    /// user moves the icon, their choice is stored there and wins.
+    private func requestRightmostPosition() {
+        let key = "NSStatusItem Preferred Position \(Self.autosaveName)"
+        guard UserDefaults.standard.object(forKey: key) == nil else { return }
+        UserDefaults.standard.set(0.0, forKey: key)
+    }
+
+    // MARK: - Scanning
+
+    @objc private func environmentChanged(_ notification: Notification) {
+        refresh()
+    }
+
+    /// Starts a background scan. A request made while one is running queues
+    /// one more, so the result always reflects the latest state.
+    private func refresh() {
+        guard MenuBarExtras.isTrusted else { return }
+        guard !isScanning else {
+            scanAgain = true
+            return
+        }
+        isScanning = true
+        let apps = MenuBarExtras.runningApps()
+        let owner = NSWorkspace.shared.menuBarOwningApplication?.processIdentifier
+        scanQueue.async {
+            let scan = MenuBarExtras.scan(apps, menuBarOwner: owner)
+            Task { @MainActor in self.finish(scan) }
+        }
+    }
+
+    private func finish(_ scan: MenuBarExtras.Scan) {
+        isScanning = false
+        let ownBundleID = Bundle.main.bundleIdentifier.map { Set([$0]) } ?? []
+        let items = ExtraList.filter(scan.extras.map(\.item),
+                                     excludingPIDs: [ProcessInfo.processInfo.processIdentifier],
+                                     excludingBundleIDs: ownBundleID)
+        let sorted = ExtraList.classifyAndSort(items, screens: Screens.current(), appMenus: scan.appMenus)
+        let changed = sorted != entries
+        entries = sorted
+        extras = Dictionary(scan.extras.map { ($0.item.id, $0) }, uniquingKeysWith: { first, _ in first })
+        // An open menu updates in place.
+        if changed && isMenuOpen { rebuild(menu) }
+        if scanAgain {
+            scanAgain = false
+            refresh()
         }
     }
 
     // MARK: - Menu
 
     func menuNeedsUpdate(_ menu: NSMenu) {
+        rebuild(menu)
+    }
+
+    func menuWillOpen(_ menu: NSMenu) {
+        isMenuOpen = true
+        refresh()
+    }
+
+    func menuDidClose(_ menu: NSMenu) {
+        isMenuOpen = false
+    }
+
+    private func rebuild(_ menu: NSMenu) {
         menu.removeAllItems()
-        elements = [:]
 
         if MenuBarExtras.isTrusted {
             addExtras(to: menu)
@@ -54,7 +153,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
         let login = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
         login.target = self
-        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        switch SMAppService.mainApp.status {
+        case .enabled:
+            login.state = .on
+        case .requiresApproval:
+            login.state = .mixed
+            login.toolTip = "Waiting for approval in System Settings › General › Login Items"
+        default:
+            login.state = .off
+        }
         menu.addItem(login)
         let quitItem = NSMenuItem(title: "Quit NotchBar", action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
@@ -62,27 +169,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func addExtras(to menu: NSMenu) {
-        let live = MenuBarExtras.all()
-        let ownBundleID = Bundle.main.bundleIdentifier.map { Set([$0]) } ?? []
-        let items = ExtraList.filter(live.map(\.item),
-                                     excludingPIDs: [ProcessInfo.processInfo.processIdentifier],
-                                     excludingBundleIDs: ownBundleID)
-        let sorted = ExtraList.classifyAndSort(items, screens: Screens.current())
-        for extra in live { elements[extra.item.id] = extra.element }
-
-        guard !sorted.isEmpty else {
+        guard let entries else {
+            menu.addItem(header("Reading menu bar items…"))
+            return
+        }
+        guard !entries.isEmpty else {
             menu.addItem(header("No menu bar items found"))
             return
         }
 
         var icons: [pid_t: NSImage] = [:]
-        var lastHidden: Bool?
-        for entry in sorted {
-            let hidden = entry.visibility.isHidden
-            if hidden != lastHidden {
-                if lastHidden != nil { menu.addItem(.separator()) }
-                menu.addItem(header(hidden ? "Hidden by the notch" : "Visible"))
-                lastHidden = hidden
+        var lastSection: ItemSection?
+        for entry in entries {
+            let section = entry.visibility.section
+            if section != lastSection {
+                if lastSection != nil { menu.addItem(.separator()) }
+                menu.addItem(header(Self.title(of: section)))
+                lastSection = section
             }
             let menuItem = NSMenuItem(title: entry.item.displayName, action: #selector(openExtra(_:)), keyEquivalent: "")
             menuItem.target = self
@@ -92,6 +195,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if icons[entry.item.pid] == nil { icons[entry.item.pid] = icon(for: entry.item.pid) }
             menuItem.image = icons[entry.item.pid]
             menu.addItem(menuItem)
+        }
+    }
+
+    private static func title(of section: ItemSection) -> String {
+        switch section {
+        case .hidden: return "Hidden by the notch"
+        case .visible: return "Visible"
+        case .unknown: return "Position unknown"
         }
     }
 
@@ -110,11 +221,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: - Actions
 
     @objc private func openExtra(_ sender: NSMenuItem) {
-        guard let id = sender.representedObject as? String, let element = elements[id] else { return }
+        guard let id = sender.representedObject as? String, let extra = extras[id] else { return }
         // Let our own menu finish closing, then press off the main thread:
         // AXPress blocks while the target app opens its menu.
         DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 0.15) {
-            MenuBarExtras.open(element)
+            MenuBarExtras.open(extra)
         }
     }
 
@@ -125,16 +236,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func toggleLaunchAtLogin() {
         let service = SMAppService.mainApp
         do {
-            if service.status == .enabled {
+            switch service.status {
+            case .enabled:
                 try service.unregister()
-            } else {
+            case .requiresApproval:
+                // Already registered; registering again would throw.
+                // Only the user can approve it.
+                SMAppService.openSystemSettingsLoginItems()
+            case .notRegistered, .notFound:
                 try service.register()
                 if service.status == .requiresApproval {
                     SMAppService.openSystemSettingsLoginItems()
                 }
+            @unknown default:
+                break
             }
         } catch {
-            NSApp.activate(ignoringOtherApps: true)
+            activate()
             let alert = NSAlert(error: error)
             alert.messageText = "Couldn't change Launch at Login"
             alert.runModal()
@@ -145,10 +263,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApp.terminate(nil)
     }
 
+    private func activate() {
+        if #available(macOS 14, *) {
+            NSApp.activate()
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+        }
+    }
+
     // MARK: - Accessibility permission
 
     private func showAccessibilityAlert() {
-        NSApp.activate(ignoringOtherApps: true)
+        activate()
         let alert = NSAlert()
         alert.messageText = "NotchBar needs Accessibility permission"
         alert.informativeText = """
@@ -162,7 +288,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         alert.addButton(withTitle: "Open System Settings")
         alert.addButton(withTitle: "Later")
         if alert.runModal() == .alertFirstButtonReturn {
-            NSWorkspace.shared.open(Self.accessibilitySettingsURL)
+            _ = Self.accessibilitySettingsURLs.first { NSWorkspace.shared.open($0) }
         }
     }
 }
