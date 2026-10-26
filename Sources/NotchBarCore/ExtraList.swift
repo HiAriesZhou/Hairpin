@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 /// A menu bar extra (status item) of some app, as read via Accessibility.
 public struct ExtraItem: Equatable, Identifiable, Sendable {

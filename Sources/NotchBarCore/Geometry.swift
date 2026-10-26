@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 /// A display, described in global Quartz coordinates (origin at the top-left
 /// of the primary display, y grows downward) — the same space Accessibility
