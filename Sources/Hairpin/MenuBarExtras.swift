@@ -1,6 +1,6 @@
 import AppKit
 import ApplicationServices
-import NotchBarCore
+import HairpinCore
 
 /// An extra read from another app, plus the live element to press.
 ///

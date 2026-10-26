@@ -1,6 +1,6 @@
 import AppKit
 import ApplicationServices
-import NotchBarCore
+import HairpinCore
 import ServiceManagement
 
 @MainActor
@@ -16,9 +16,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var extras: [String: LiveExtra] = [:]
     private var isScanning = false
     private var scanAgain = false
-    private let scanQueue = DispatchQueue(label: "com.hiarieszhou.notchbar.scan", qos: .userInitiated)
+    private let scanQueue = DispatchQueue(label: "com.hiarieszhou.hairpin.scan", qos: .userInitiated)
 
-    private static let autosaveName = "NotchBar"
+    private static let autosaveName = "Hairpin"
     /// The macOS 13+ Privacy & Security pane first, the legacy pane id second.
     private static let accessibilitySettingsURLs = [
         URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility")!,
@@ -30,15 +30,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.autosaveName = Self.autosaveName
         if let button = statusItem.button {
-            let image = NSImage(systemSymbolName: "menubar.arrow.up.rectangle", accessibilityDescription: "NotchBar")
-                ?? NSImage(systemSymbolName: "ellipsis.circle", accessibilityDescription: "NotchBar")
+            let image = NSImage(systemSymbolName: "menubar.arrow.up.rectangle", accessibilityDescription: "Hairpin")
+                ?? NSImage(systemSymbolName: "ellipsis.circle", accessibilityDescription: "Hairpin")
             if let image {
                 image.isTemplate = true
                 button.image = image
             } else {
                 button.title = "⋯"
             }
-            button.toolTip = "NotchBar"
+            button.toolTip = "Hairpin"
         }
         menu.delegate = self
         menu.autoenablesItems = false
@@ -62,7 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    /// Opening NotchBar.app again (Finder, Spotlight, Launchpad) while it runs
+    /// Opening Hairpin.app again (Finder, Spotlight, Launchpad) while it runs
     /// shows the list at the pointer: a way in if our own icon is hidden.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         Task {
@@ -163,7 +163,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             login.state = .off
         }
         menu.addItem(login)
-        let quitItem = NSMenuItem(title: "Quit NotchBar", action: #selector(quit), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "Quit Hairpin", action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
     }
@@ -276,14 +276,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func showAccessibilityAlert() {
         activate()
         let alert = NSAlert()
-        alert.messageText = "NotchBar needs Accessibility permission"
+        alert.messageText = "Hairpin needs Accessibility permission"
         alert.informativeText = """
-            NotchBar uses the Accessibility API to list the menu bar icons of other apps \
+            Hairpin uses the Accessibility API to list the menu bar icons of other apps \
             (including the ones hidden behind the notch) and to open them for you. \
             It does not read window contents or keystrokes.
 
-            Open System Settings › Privacy & Security › Accessibility and turn on NotchBar. \
-            If it isn't listed, click + and add NotchBar.app.
+            Open System Settings › Privacy & Security › Accessibility and turn on Hairpin. \
+            If it isn't listed, click + and add Hairpin.app.
             """
         alert.addButton(withTitle: "Open System Settings")
         alert.addButton(withTitle: "Later")

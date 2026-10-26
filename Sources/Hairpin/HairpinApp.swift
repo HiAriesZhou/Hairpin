@@ -1,7 +1,7 @@
 import AppKit
 
 @main
-enum NotchBarApp {
+enum HairpinApp {
     static func main() {
         // The process starts on the main thread; tell the compiler so.
         MainActor.assumeIsolated {

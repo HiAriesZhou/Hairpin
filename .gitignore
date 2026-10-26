@@ -3,6 +3,6 @@
 build/
 *.xcodeproj/
 DerivedData/
-NotchBar.app/
-NotchBar.zip
+Hairpin.app/
+Hairpin.zip
 .DS_Store

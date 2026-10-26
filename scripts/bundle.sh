@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Builds NotchBar in release mode and packages NotchBar.app + NotchBar.zip
+# Builds Hairpin in release mode and packages Hairpin.app + Hairpin.zip
 # in the repository root. Usage: VERSION=0.1.0 scripts/bundle.sh
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
-APP="$ROOT/NotchBar.app"
-ZIP="$ROOT/NotchBar.zip"
+APP="$ROOT/Hairpin.app"
+ZIP="$ROOT/Hairpin.zip"
 # Version: $VERSION if set, else a tag on HEAD itself (vX.Y.Z), else 0.0.0.
 # A pre-release or build suffix (-rc.1, +meta) is dropped, since
 # CFBundleShortVersionString takes numbers only.
@@ -37,7 +37,7 @@ BIN_DIR="$(swift build -c release --show-bin-path)"
 echo "==> Assembling $APP"
 rm -rf "$APP" "$ZIP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN_DIR/NotchBar" "$APP/Contents/MacOS/NotchBar"
+cp "$BIN_DIR/Hairpin" "$APP/Contents/MacOS/Hairpin"
 cp "$ROOT/LICENSE" "$APP/Contents/Resources/LICENSE"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
@@ -48,15 +48,15 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleExecutable</key>
-    <string>NotchBar</string>
+    <string>Hairpin</string>
     <key>CFBundleIdentifier</key>
-    <string>com.hiarieszhou.notchbar</string>
+    <string>com.hiarieszhou.hairpin</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>NotchBar</string>
+    <string>Hairpin</string>
     <key>CFBundleDisplayName</key>
-    <string>NotchBar</string>
+    <string>Hairpin</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

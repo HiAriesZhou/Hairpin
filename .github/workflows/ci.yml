@@ -41,8 +41,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NotchBar
-          path: NotchBar.zip
+          name: Hairpin
+          path: Hairpin.zip
           if-no-files-found: error
 
       - name: Publish prerelease
@@ -52,9 +52,9 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" NotchBar.zip --clobber
+            gh release upload "$TAG" Hairpin.zip --clobber
             gh release edit "$TAG" --prerelease
           else
-            gh release create "$TAG" NotchBar.zip --prerelease --verify-tag \
-              --title "NotchBar $TAG" --generate-notes
+            gh release create "$TAG" Hairpin.zip --prerelease --verify-tag \
+              --title "Hairpin $TAG" --generate-notes
           fi

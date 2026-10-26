@@ -1,7 +1,7 @@
 import Foundation
 import CoreGraphics
 import XCTest
-@testable import NotchBarCore
+@testable import HairpinCore
 
 /// 14" MacBook Pro at default scaling: 1512×982 points, 204-pt-wide notch.
 private let builtInCocoa = CGRect(x: 0, y: 0, width: 1512, height: 982)
@@ -175,7 +175,7 @@ final class ExtraListTests: XCTestCase {
 
     func testFilterDropsOwnItemsOtherRolesAndDuplicates() {
         var ours = item("ours", x: 1300, pid: 1)
-        ours.bundleID = "com.hiarieszhou.notchbar"
+        ours.bundleID = "com.hiarieszhou.hairpin"
         var otherBundle = item("bundle", x: 1300, pid: 3)
         otherBundle.bundleID = "com.example.hidden"
         let items = [
