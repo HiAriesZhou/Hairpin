@@ -43,6 +43,14 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/Hairpin" "$APP/Contents/MacOS/Hairpin"
 cp "$ROOT/LICENSE" "$APP/Contents/Resources/LICENSE"
 
+echo "==> Drawing the app icon"
+ICON_BUILD="$ROOT/.build/app-icon"
+rm -rf "$ICON_BUILD"
+mkdir -p "$ICON_BUILD"
+swiftc -O "$ROOT/Sources/Hairpin/HairpinIcon.swift" "$ROOT/scripts/AppIcon/main.swift" -o "$ICON_BUILD/make-icon"
+"$ICON_BUILD/make-icon" "$ICON_BUILD/AppIcon.iconset"
+iconutil -c icns "$ICON_BUILD/AppIcon.iconset" -o "$APP/Contents/Resources/AppIcon.icns"
+
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -52,6 +60,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <string>en</string>
     <key>CFBundleExecutable</key>
     <string>Hairpin</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>com.hiarieszhou.hairpin</string>
     <key>CFBundleInfoDictionaryVersion</key>
