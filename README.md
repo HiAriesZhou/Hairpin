@@ -38,11 +38,11 @@ Hairpin 只在这种时候出现：菜单栏里有图标被挤掉时，可见图
 - **屏幕录制（可选，macOS 14 及以上）**：用来显示图标在菜单栏上的真实样子，并准确识别每个窗口属于哪个应用。第一次有图标被挤掉并展开时，系统会请求授权；也可以从菜单里的「Show Real Icons…」授权。不授权也能用：图标会显示为灰度的应用图标，识别改用位置推算。Hairpin 只截取菜单栏这一条，只在出现新的可见图标时截一次，截图只保存在内存里；截图时 macOS 可能短暂显示录屏指示。
 - **从旧版 NotchBar 升级**：Bundle ID 已从 `com.hiarieszhou.notchbar` 改为 `com.hiarieszhou.hairpin`，macOS 把它当作一个新应用，旧版的辅助功能授权和登录项都不会沿用。请在「辅助功能」里重新为 Hairpin.app 打开授权，需要的话重新勾选「Launch at Login」；旧的 NotchBar 条目可以用「−」删掉。
 
-Hairpin 不联网，不读取窗口内容，也不记录按键。
+Hairpin 不联网，不记录按键，也不读取应用窗口的内容。授予屏幕录制后，它只截取菜单栏这一条来抠出图标形状，并读取菜单栏图标窗口的名称来识别所属应用；图标形状只保存在内存里。
 
 ### 使用
 
-- **发卡**：有图标被挤掉时，出现在可见图标的最左端，也就是下一个图标本该在的位置；如果那里被前台应用的长菜单占满，就放到刘海左侧，或盖在最左边的可见图标上（被盖住的图标也一并收进去）。切换应用时会重新计算位置。Hairpin 自己的图标正好是最左边那个时，它本身就是发卡。
+- **发卡**：有图标被挤掉时，出现在可见图标的最左端，也就是下一个图标本该在的位置；如果那里被前台应用的长菜单占满，就放到刘海左侧，或者戴上一个小胶囊盖住最左边的可见图标（被盖住的图标也一并收进去）。切换应用、菜单栏里出现或消失图标时，位置都会重新计算（每秒检查一次菜单栏）。菜单栏自动隐藏或处于全屏时，发卡随菜单栏一起隐藏。Hairpin 自己的图标正好是最左边那个时，它本身就是发卡。
 - **打开**：
   - 悬停在发卡上 0.5 秒：展开，鼠标离开后收起；
   - 点击发卡：展开并保持，直到点击别处、再点一次发卡或按 Esc。
@@ -53,7 +53,7 @@ Hairpin 不联网，不读取窗口内容，也不记录按键。
   - **Open on Hover**：悬停是否展开，默认开启；关掉后只能点击展开；
   - **Launch at Login**：登录时自动启动（使用 `SMAppService`）。如果 macOS 要求你批准，这一项会显示为「–」，点它会打开「系统设置 › 通用 › 登录项」；
   - **Quit Hairpin**：退出。
-- 如果找不到 Hairpin：在它运行时，从访达、聚焦搜索或启动台再打开一次 Hairpin.app，被挤掉的图标会直接展开；没有图标被挤掉时，菜单会在鼠标指针处弹出。
+- 如果找不到 Hairpin：在它运行时，从访达、聚焦搜索或启动台再打开一次 Hairpin.app，被挤掉的图标会直接展开（没有发卡时，比如菜单栏自动隐藏了，就在鼠标指针处展开）；没有图标被挤掉时，菜单会在鼠标指针处弹出。
 
 ### 工作原理
 
@@ -115,11 +115,11 @@ Hairpin only shows up when that happens. While icons are hidden, a little hairpi
 - **Screen Recording (optional, macOS 14 or later).** It lets Hairpin show icons as they look in the menu bar and tell exactly which app each one belongs to. macOS asks for it the first time hidden icons are opened, or grant it from "Show Real Icons…" in the menu. Without it Hairpin still works: icons show as gray app icons, and it works out which icon is which from positions. Hairpin captures only the menu bar strip, once when new icons show up, and keeps the captures in memory; macOS may briefly show its recording indicator while it does.
 - **Upgrading from NotchBar.** The bundle ID changed from `com.hiarieszhou.notchbar` to `com.hiarieszhou.hairpin`, so macOS treats Hairpin as a new app and the old Accessibility and Login Items grants don't carry over. Turn Accessibility on again for Hairpin.app, and re-enable "Launch at Login" if you used it. You can remove the old NotchBar entry with "−".
 
-Hairpin makes no network connections, doesn't read window contents and doesn't log keystrokes.
+Hairpin makes no network connections, doesn't log keystrokes and doesn't read app windows' contents. With Screen Recording it captures only the menu bar strip, to cut out icon shapes, and reads menu bar item windows' names to tell which app each belongs to; the shapes are kept in memory only.
 
 ### Usage
 
-- **The hairpin** appears while icons are hidden, at the left end of the shown icons, where the next one would have gone. If the frontmost app's long menus fill that spot, it moves left of the notch, or sits on the leftmost shown icon, which it then holds too. It moves as you switch apps. When Hairpin's own icon is the leftmost one, that icon is the hairpin.
+- **The hairpin** appears while icons are hidden, at the left end of the shown icons, where the next one would have gone. If the frontmost app's long menus fill that spot, it moves left of the notch, or puts on a small capsule and sits on the leftmost shown icon, which it then holds too. It moves as you switch apps and as icons come and go (it checks the menu bar every second). While the menu bar is hidden (auto-hide, full screen), so is the hairpin. When Hairpin's own icon is the leftmost one, that icon is the hairpin.
 - **Opening it:**
   - rest the pointer on it for half a second: the row opens, and closes when the pointer leaves;
   - click it: the row opens and stays until you click elsewhere, click the hairpin again or press Escape.
@@ -130,7 +130,7 @@ Hairpin makes no network connections, doesn't read window contents and doesn't l
   - **Open on Hover** turns hover opening on or off (on by default; off, only a click opens the row);
   - **Launch at Login** starts Hairpin when you log in (via `SMAppService`). If macOS asks for approval, the item shows a dash and opens System Settings › General › Login Items;
   - **Quit Hairpin** quits.
-- If you can't find Hairpin, open Hairpin.app again while it's running (Finder, Spotlight or Launchpad). The hidden icons drop down; with none hidden, the menu pops up at the pointer.
+- If you can't find Hairpin, open Hairpin.app again while it's running (Finder, Spotlight or Launchpad). The hidden icons drop down, at the pointer when there's no hairpin (say the menu bar is hidden); with none hidden, the menu pops up at the pointer.
 
 ### How it works
 

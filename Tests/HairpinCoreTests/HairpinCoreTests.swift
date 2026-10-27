@@ -533,3 +533,71 @@ final class StackSlotTests: XCTestCase {
                                         leftmostShown: leftmost))
     }
 }
+
+final class StackPlacementTests: XCTestCase {
+    // builtIn: notch 654…858; status windows 33 high at the top.
+    private func shown(_ id: UInt32, x: CGFloat, width: CGFloat = 30, onscreen: Bool = true) -> StatusWindow {
+        StatusWindow(id: id, frame: CGRect(x: x, y: 0, width: width, height: 33), isOnscreen: onscreen)
+    }
+    private let shortMenus = CGRect(x: 0, y: 0, width: 400, height: 24)
+
+    func testOwnIconAtTheLeftEndHoldsTheItems() {
+        let layout = MenuBarLayout(windows: [shown(1, x: 1200), shown(2, x: 1000)], screens: [builtIn])
+        XCTAssertEqual(layout.placement(width: 20, screen: 0, appMenus: shortMenus,
+                                        own: CGRect(x: 1000, y: 0, width: 30, height: 33), coverable: []), .ownIcon)
+    }
+
+    func testANarrowGapRightOfTheNotchFitsThePin() {
+        // 26 points from the notch to the leftmost item, as beside Codex's pill.
+        let layout = MenuBarLayout(windows: [shown(1, x: 884, width: 48)], screens: [builtIn])
+        XCTAssertEqual(layout.placement(width: 20, screen: 0, appMenus: shortMenus, own: nil, coverable: [1]),
+                       .slot(rightEdge: 882))
+    }
+
+    func testWithNoRoomThePinCoversTheLeftmostKnownItem() {
+        let unknown = shown(1, x: 935, width: 24), known = shown(2, x: 960)
+        let layout = MenuBarLayout(windows: [shown(3, x: 1200), known, unknown], screens: [builtIn])
+        let longMenus = CGRect(x: 0, y: 0, width: 930, height: 24)
+        XCTAssertEqual(layout.placement(width: 20, screen: 0, appMenus: longMenus, own: nil, coverable: [2, 3]),
+                       .covering(known))
+    }
+
+    func testNoPinWithNothingToCover() {
+        let layout = MenuBarLayout(windows: [shown(1, x: 935, width: 24)], screens: [builtIn])
+        let longMenus = CGRect(x: 0, y: 0, width: 930, height: 24)
+        XCTAssertNil(layout.placement(width: 20, screen: 0, appMenus: longMenus, own: nil, coverable: []))
+    }
+
+    func testNoPinWhileTheMenuBarIsParked() {
+        // Auto-hide and full screen park the row above the screen.
+        let parked = StatusWindow(id: 1, frame: CGRect(x: 1200, y: -62, width: 30, height: 30), isOnscreen: false)
+        let layout = MenuBarLayout(windows: [parked], screens: [builtIn])
+        XCTAssertFalse(layout.isShowing(0))
+        XCTAssertNil(layout.placement(width: 20, screen: 0, appMenus: nil, own: nil, coverable: [1]))
+    }
+
+    func testItemsUnderTheNotchDontCountAsShown() {
+        // Before macOS 26 an overflowed window stays onscreen under the notch.
+        let layout = MenuBarLayout(windows: [shown(1, x: 1000), shown(2, x: 800)], screens: [builtIn])
+        XCTAssertTrue(layout.isShowing(0))
+        XCTAssertEqual(layout.placement(width: 20, screen: 0, appMenus: nil, own: nil, coverable: []),
+                       .slot(rightEdge: 998))
+    }
+
+    func testTargetIsTheNotchedScreen() {
+        let plain = ScreenInfo(frame: CGRect(x: -1920, y: 0, width: 1920, height: 1080))
+        XCTAssertEqual(MenuBarLayout.targetScreen(in: [plain, builtIn]), 1)
+        XCTAssertEqual(MenuBarLayout.targetScreen(in: [plain]), 0)
+    }
+
+    func testClassifiedItemsCarryTheirJudgedWindow() {
+        let windows = [window(1, x: 1440), window(3, x: 1410, onscreen: false),
+                       window(11, x: 1674, y: -1080), window(13, x: 1644, y: -1080)]
+        let items = [
+            ExtraItem(id: "shown", pid: 1, appName: "A", frame: CGRect(x: 1674, y: -1076, width: 24, height: 24)),
+            ExtraItem(id: "overflowed", pid: 1, appName: "B", frame: CGRect(x: 1644, y: -1076, width: 24, height: 24)),
+        ]
+        let sorted = ExtraList.classifyAndSort(items, screens: [builtIn, external], windows: windows)
+        XCTAssertEqual(sorted.map(\.judgedWindowID), [3, 1])
+    }
+}

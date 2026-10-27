@@ -19,9 +19,9 @@ struct StackAnchor: Equatable {
 
     var place: Place
     var row: NSRect
-    /// A shown item the pin sits on for lack of room (Quartz); it's kept
-    /// with the hidden ones.
-    var covered: CGRect?
+    /// The window of a shown item the pin sits on for lack of room; the pin
+    /// then hides it, and it's kept with the hidden ones.
+    var covered: UInt32?
 }
 
 /// Hairpin's pin at the left end of the shown menu bar items, where the
@@ -38,8 +38,11 @@ struct StackAnchor: Equatable {
 final class NotchStack: NSObject {
     static let hoverDelay: TimeInterval = 0.5
     private static let collapseDelay: TimeInterval = 0.3
-    static let pileWidth: CGFloat = 26
+    /// The pin's own width: its 18-point mark and a point either side.
+    static let pinWidth: CGFloat = 20
     private static let pinSide: CGFloat = 18
+    /// The capsule the pin wears to hide an item it sits on.
+    private static let chipHeight: CGFloat = 22
     /// Icons keep their menu bar size, in round cells that light up under
     /// the pointer.
     private static let iconSide: CGFloat = 22
@@ -47,13 +50,20 @@ final class NotchStack: NSObject {
     private static let cellSpacing: CGFloat = 2
     private static let listInset: CGFloat = 5
     private static let listGap: CGFloat = 6
+    private static let screenMargin: CGFloat = 6
 
     /// The items are about to drop down: time to rescan and recapture.
     var onExpand: (() -> Void)?
     /// An item was clicked; the row stays open.
     var onSelect: ((String) -> Void)?
-    /// The menu bar's light or dark look, which captured icons are drawn for.
-    var appearance: NSAppearance?
+    /// The menu bar's light or dark look, which the pin is drawn for.
+    var appearance: NSAppearance? {
+        didSet {
+            guard appearance?.name != oldValue?.name, let pile else { return }
+            pile.appearance = appearance
+            label(pile)
+        }
+    }
     /// Whether resting the pointer on the pin opens the row; a click always does.
     var opensOnHover = true
 
@@ -68,6 +78,8 @@ final class NotchStack: NSObject {
     /// Set once an item is clicked: the row then waits for a click elsewhere.
     private var isPinned = false
     private var eventMonitors: [Any] = []
+    /// Where a row opened without a pin hangs from.
+    private var pointerOrigin: NSPoint?
 
     /// True while Hairpin's icon holds the items.
     var usesButton: Bool { !entries.isEmpty && anchor?.place == .button }
@@ -82,11 +94,21 @@ final class NotchStack: NSObject {
 
     func update(_ entries: [StackEntry], anchor: StackAnchor?) {
         guard entries != self.entries || anchor != self.anchor else { return }
-        let changed = entries != self.entries
         self.entries = entries
         self.anchor = anchor
-        guard !entries.isEmpty, let anchor else {
+        guard !entries.isEmpty else {
             hide()
+            return
+        }
+        guard let anchor else {
+            // No pin while the menu bar is hidden; a row opened at the
+            // pointer stays.
+            pile?.orderOut(nil)
+            if pointerOrigin != nil {
+                if isExpanded { showList(animated: false) }
+            } else {
+                hide()
+            }
             return
         }
         switch anchor.place {
@@ -94,8 +116,8 @@ final class NotchStack: NSObject {
             let pile = self.pile ?? makePanel()
             self.pile = pile
             pile.appearance = appearance
-            if changed { label(pile) }
             pile.setFrame(NSRect(x: minX, y: anchor.row.minY, width: width, height: anchor.row.height), display: true)
+            label(pile)
             pile.orderFrontRegardless()
         case .button:
             pile?.orderOut(nil)
@@ -103,21 +125,52 @@ final class NotchStack: NSObject {
         if isExpanded { showList(animated: false) }
     }
 
-    /// Opens the row; `pinned` keeps it open when the pointer leaves.
-    func expand(pinned: Bool = false) {
+    /// Opens the row; `pinned` keeps it open when the pointer leaves. False
+    /// when there's nothing to open it from (no pin shown).
+    @discardableResult
+    func expand(pinned: Bool = false) -> Bool {
         expandTimer?.invalidate()
         expandTimer = nil
-        guard !isExpanded, !entries.isEmpty, pile?.isVisible == true || usesButton else { return }
+        if isExpanded {
+            if pinned { pin() }
+            return true
+        }
+        guard canOpen else { return false }
         onExpand?()
+        // The rescan it starts can take the pin away (access revoked).
+        guard canOpen else { return false }
         isExpanded = true
         isPinned = pinned
         showList(animated: true)
         watchClicks()
+        return true
     }
 
-    /// A click on the pin: opens the row to stay, or closes it.
+    /// Opens the row to stay under the pointer, for when there's no pin to
+    /// open it from (its menu bar hidden, or Hairpin's icon out of sight).
+    @discardableResult
+    func expandAtPointer() -> Bool {
+        pointerOrigin = NSEvent.mouseLocation
+        if expand(pinned: true) { return true }
+        pointerOrigin = nil
+        return false
+    }
+
+    private var canOpen: Bool {
+        !entries.isEmpty && (pile?.isVisible == true || usesButton || pointerOrigin != nil)
+    }
+
+    /// A click on the pin: opens the row to stay, keeps a row that hovering
+    /// opened, or closes a kept one.
     func toggle() {
-        if isExpanded { collapse() } else { expand(pinned: true) }
+        if isExpanded && isPinned { collapse() } else { expand(pinned: true) }
+    }
+
+    /// Keeps the open row open when the pointer leaves.
+    private func pin() {
+        isPinned = true
+        collapseTimer?.invalidate()
+        collapseTimer = nil
     }
 
     func collapse() {
@@ -128,6 +181,7 @@ final class NotchStack: NSObject {
         guard isExpanded else { return }
         isExpanded = false
         isPinned = false
+        pointerOrigin = nil
         eventMonitors.forEach(NSEvent.removeMonitor)
         eventMonitors = []
         guard let list else { return }
@@ -156,7 +210,7 @@ final class NotchStack: NSObject {
         // while it holds the items itself.
         guard opensOnHover, isOpener(event.window), !isExpanded, expandTimer == nil else { return }
         expandTimer = Timer.scheduledTimer(withTimeInterval: Self.hoverDelay, repeats: false) { [weak self] _ in
-            MainActor.assumeIsolated { self?.expand() }
+            MainActor.assumeIsolated { _ = self?.expand() }
         }
     }
 
@@ -180,9 +234,7 @@ final class NotchStack: NSObject {
     }
 
     private func select(_ id: String) {
-        isPinned = true
-        collapseTimer?.invalidate()
-        collapseTimer = nil
+        pin()
         onSelect?(id)
     }
 
@@ -217,17 +269,30 @@ final class NotchStack: NSObject {
 
     // MARK: - Drawing
 
-    /// Draws the pin once and labels it with the count.
+    /// Draws the pin once, then tints it for the menu bar, puts it on a
+    /// capsule that hides the item under it if it sits on one, and labels it
+    /// with the count.
     private func label(_ pile: NSPanel) {
         guard let content = pile.contentView else { return }
         if content.subviews.isEmpty {
+            let chip = NSView()
+            chip.wantsLayer = true
+            chip.layer?.cornerRadius = Self.chipHeight / 2
+            chip.layer?.cornerCurve = .continuous
+            chip.autoresizingMask = [.width, .minYMargin, .maxYMargin]
+            content.addSubview(chip)
             let view = NSImageView(image: HairpinIcon.image(side: Self.pinSide))
             view.frame = content.bounds
             view.autoresizingMask = [.width, .height]
             view.imageAlignment = .alignCenter
             content.addSubview(view)
         }
-        (content.subviews.first as? NSImageView)?.contentTintColor = foreground
+        let chip = content.subviews[0], mark = content.subviews[1] as? NSImageView
+        chip.isHidden = anchor?.covered == nil
+        chip.frame = NSRect(x: 0, y: ((content.bounds.height - Self.chipHeight) / 2).rounded(),
+                            width: content.bounds.width, height: Self.chipHeight)
+        chip.layer?.backgroundColor = (isDark ? NSColor(white: 0.16, alpha: 1) : NSColor(white: 0.95, alpha: 1)).cgColor
+        mark?.contentTintColor = foreground
         content.toolTip = entries.count == 1 ? "1 hidden icon" : "\(entries.count) hidden icons"
         content.setAccessibilityLabel(content.toolTip)
     }
@@ -235,23 +300,45 @@ final class NotchStack: NSObject {
     /// The hidden items in a row of glass under the pin, in menu bar order,
     /// icons as they look in the menu bar.
     private func showList(animated: Bool) {
-        guard let anchor, let opener = (usesButton ? button?.window : pile) else { return }
+        // Under the pin, Hairpin's icon or the pointer.
+        let opener: NSRect, top: CGFloat
+        if let origin = pointerOrigin {
+            opener = NSRect(origin: origin, size: .zero)
+            top = origin.y
+        } else if let anchor, let window = (usesButton ? button?.window : pile) {
+            opener = window.frame
+            top = anchor.row.minY
+        } else {
+            return
+        }
         let list = self.list ?? makeList()
         self.list = list
 
-        let items = entries.map { entry in
-            GlassItem(image: Self.fitted(entry.image, side: Self.iconSide), toolTip: entry.toolTip,
-                      side: Self.cellSide) { [weak self] in self?.select(entry.id) }
+        // As many cells per line as the screen holds; the rest wrap below.
+        let center = NSPoint(x: opener.midX, y: opener.midY)
+        guard let screen = (NSScreen.screens.first { $0.frame.contains(center) } ?? NSScreen.main)?.frame else { return }
+        let room = screen.width - 2 * Self.screenMargin - 2 * Self.listInset + Self.cellSpacing
+        let perLine = max(1, Int(room / (Self.cellSide + Self.cellSpacing)))
+        let lines = stride(from: 0, to: entries.count, by: perLine).map { start -> NSView in
+            let cells = entries[start..<min(start + perLine, entries.count)].map { entry in
+                GlassItem(image: Self.fitted(entry.image, side: Self.iconSide), toolTip: entry.toolTip,
+                          side: Self.cellSide) { [weak self] in self?.select(entry.id) }
+            }
+            let line = NSStackView(views: cells)
+            line.spacing = Self.cellSpacing
+            return line
         }
-        let row = NSStackView(views: items)
-        row.orientation = .horizontal
-        row.spacing = Self.cellSpacing
-        row.edgeInsets = NSEdgeInsets(top: Self.listInset, left: Self.listInset,
-                                      bottom: Self.listInset, right: Self.listInset)
-        let size = row.fittingSize
-        row.frame = NSRect(origin: .zero, size: size)
-        let background = Self.glass(around: row, cornerRadius: size.height / 2)
-        background.frame = row.frame
+        let rows = NSStackView(views: lines)
+        rows.orientation = .vertical
+        rows.alignment = .leading
+        rows.spacing = Self.cellSpacing
+        rows.edgeInsets = NSEdgeInsets(top: Self.listInset, left: Self.listInset,
+                                       bottom: Self.listInset, right: Self.listInset)
+        let size = rows.fittingSize
+        rows.frame = NSRect(origin: .zero, size: size)
+        // A capsule for one line, a rounded rect for more.
+        let background = Self.glass(around: rows, cornerRadius: Self.cellSide / 2 + Self.listInset)
+        background.frame = rows.frame
         background.addTrackingArea(NSTrackingArea(rect: .zero,
                                                   options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
                                                   owner: self, userInfo: nil))
@@ -263,9 +350,9 @@ final class NotchStack: NSObject {
             context.duration = 0
             list.animator().alphaValue = 1
         }
-        let screen = NSScreen.screens.first { $0.frame.intersects(anchor.row) }?.frame ?? anchor.row
-        let x = min(max(opener.frame.midX - size.width / 2, screen.minX + 6), screen.maxX - size.width - 6)
-        let frame = NSRect(x: x, y: anchor.row.minY - Self.listGap - size.height, width: size.width, height: size.height)
+        let x = min(max(opener.midX - size.width / 2, screen.minX + Self.screenMargin),
+                    screen.maxX - size.width - Self.screenMargin)
+        let frame = NSRect(x: x, y: top - Self.listGap - size.height, width: size.width, height: size.height)
         guard animated else {
             list.setFrame(frame, display: true)
             list.orderFrontRegardless()

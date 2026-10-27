@@ -45,7 +45,9 @@ Start without it (`tccutil reset ScreenCapture com.hiarieszhou.hairpin`).
 
 - [ ] With icons hidden, the hairpin appears at the left end of the shown icons, right of the notch, covering no icon and no app menu.
 - [ ] With nothing hidden, the hairpin isn't there.
-- [ ] Switching to the app with long menus: the hairpin moves so it covers none of them (left of the notch, or onto the leftmost shown icon, which then shows up in the row too). Switching back: it returns right of the notch.
+- [ ] Switching to the app with long menus: the hairpin moves so it covers none of them (left of the notch, or onto the leftmost shown icon on a capsule that hides it, and that icon then shows up in the row too). Switching back: it returns right of the notch.
+- [ ] A running app adding a menu bar item (e.g. a timer starting, or Codex using the computer) moves the hairpin within about a second, without switching apps; it never ends up over a shown icon.
+- [ ] With "Automatically hide and show the menu bar" on, the hairpin appears with the menu bar and goes with it, and opening Hairpin.app again still reaches the hidden icons or the menu.
 - [ ] If Hairpin's own icon is the leftmost shown one, that icon is the hairpin: a click opens the row, a right-click or Control-click opens the menu.
 - [ ] In a full-screen app, the hairpin isn't shown.
 
@@ -53,6 +55,8 @@ Start without it (`tccutil reset ScreenCapture com.hiarieszhou.hairpin`).
 
 - [ ] Resting the pointer on the hairpin for about half a second opens the row below it; moving away closes it.
 - [ ] Clicking the hairpin opens the row; it stays when the pointer leaves, and closes on a click elsewhere, a second click on the hairpin, or Escape.
+- [ ] Clicking the hairpin while a hover has the row open keeps it open (it doesn't close).
+- [ ] Switching the system between light and dark recolors the hairpin at once.
 - [ ] Opening and closing it several times in a row, by hover and by click, works every time.
 - [ ] With "Open on Hover" off, resting the pointer does nothing and a click still opens the row. The setting survives a relaunch.
 - [ ] The row lists exactly the icons you noted as missing. Hairpin's own icon is not listed, and no blank or duplicated entries appear.
@@ -89,7 +93,7 @@ Start without it (`tccutil reset ScreenCapture com.hiarieszhou.hairpin`).
 
 ## Finding Hairpin
 
-- [ ] With Hairpin running, opening Hairpin.app again from Finder or Spotlight opens the row (or, with nothing hidden, the menu at the pointer).
+- [ ] With Hairpin running, opening Hairpin.app again from Finder or Spotlight opens the row under the hairpin, or at the pointer while the menu bar is hidden (with nothing hidden, the menu at the pointer).
 
 ## Quit
 
