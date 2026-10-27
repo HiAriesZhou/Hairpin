@@ -1,5 +1,7 @@
 # Hairpin
 
+<p align="center"><img src="docs/icon.png" width="128" height="128" alt="Hairpin's icon: a pink bow on a bobby pin"></p>
+
 [![CI](https://github.com/HiAriesZhou/Hairpin/actions/workflows/ci.yml/badge.svg)](https://github.com/HiAriesZhou/Hairpin/actions/workflows/ci.yml)
 
 A tiny macOS menu bar app that lets you reach the menu bar icons hidden behind the MacBook notch.
@@ -23,7 +25,7 @@ Hairpin 只在这种时候出现：菜单栏里有图标被挤掉时，可见图
 
 ### 安装
 
-1. 从 [Releases](https://github.com/HiAriesZhou/Hairpin/releases) 下载 `Hairpin.zip`，解压后把 `Hairpin.app` 拖进「应用程序」。
+1. 从 [Releases](https://github.com/HiAriesZhou/Hairpin/releases) 下载 `Hairpin.dmg`，打开后把 `Hairpin.app` 拖到旁边的「Applications」文件夹；或者下载 `Hairpin.zip`，解压后把 `Hairpin.app` 拖进「应用程序」。
 2. 这个应用是 ad-hoc 签名，没有经过 Apple 公证，第一次打开会被 Gatekeeper 拦下。两种办法任选一种：
    - 在 Finder 里**右键（或按住 Control 点按）Hairpin.app → 打开**，在弹出的对话框里再点「打开」；
    - 或者在终端执行：
@@ -79,7 +81,8 @@ Hairpin 不联网，不记录按键，也不读取应用窗口的内容。授予
 
 ```sh
 swift test               # 运行单元测试
-scripts/bundle.sh        # 生成 Hairpin.app 和 Hairpin.zip
+scripts/bundle.sh        # 生成 Hairpin.app 和 Hairpin.zip（含应用图标）
+scripts/dmg.sh           # 再把 Hairpin.app 打成 Hairpin.dmg
 ```
 
 需要安装 Xcode 或 Command Line Tools 的 macOS。本地调试时，可以用固定的签名身份打包，这样重新构建后系统授权不会失效：
@@ -100,7 +103,7 @@ Hairpin only shows up when that happens. While icons are hidden, a little hairpi
 
 ### Install
 
-1. Download `Hairpin.zip` from [Releases](https://github.com/HiAriesZhou/Hairpin/releases), unzip it and drag `Hairpin.app` into Applications.
+1. Download `Hairpin.dmg` from [Releases](https://github.com/HiAriesZhou/Hairpin/releases), open it and drag `Hairpin.app` onto the Applications folder beside it; or download `Hairpin.zip`, unzip it and drag `Hairpin.app` into Applications.
 2. The app is ad-hoc signed and not notarized, so Gatekeeper blocks the first launch. Either:
    - **Right-click (or Control-click) Hairpin.app in Finder → Open**, then click Open in the dialog; or
    - run:
@@ -156,7 +159,8 @@ The classification, ordering and placement logic lives in a separate `HairpinCor
 
 ```sh
 swift test               # run the unit tests
-scripts/bundle.sh        # build Hairpin.app and Hairpin.zip
+scripts/bundle.sh        # build Hairpin.app (with its icon) and Hairpin.zip
+scripts/dmg.sh           # then wrap Hairpin.app into Hairpin.dmg
 ```
 
 Needs macOS with Xcode or the Command Line Tools. For local builds, a fixed signing identity keeps the privacy grants across rebuilds:
@@ -164,6 +168,12 @@ Needs macOS with Xcode or the Command Line Tools. For local builds, a fixed sign
 ```sh
 SIGN_IDENTITY="Apple Development" scripts/bundle.sh
 ```
+
+## Contributing and security
+
+Contributions are welcome through pull requests; see [CONTRIBUTING.md](CONTRIBUTING.md). Report security issues privately as described in [SECURITY.md](SECURITY.md).
+
+欢迎通过 PR 贡献，流程见 [CONTRIBUTING.md](CONTRIBUTING.md)；安全问题请按 [SECURITY.md](SECURITY.md) 私下报告。
 
 ## License
 
