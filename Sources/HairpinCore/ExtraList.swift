@@ -36,7 +36,19 @@ public struct ExtraItem: Equatable, Identifiable, Sendable {
 public struct ClassifiedItem: Equatable, Identifiable, Sendable {
     public var item: ExtraItem
     public var visibility: ItemVisibility
+    /// A status window drawing the item, if the window list was read: one
+    /// that's onscreen if there is one, to capture the item's look from.
+    public var windowID: UInt32?
+    /// Where the item is on the screen it was judged on.
+    public var frame: CGRect?
     public var id: String { item.id }
+
+    public init(item: ExtraItem, visibility: ItemVisibility, windowID: UInt32? = nil, frame: CGRect? = nil) {
+        self.item = item
+        self.visibility = visibility
+        self.windowID = windowID
+        self.frame = frame ?? item.frame
+    }
 }
 
 public enum ExtraList {
@@ -72,20 +84,60 @@ public enum ExtraList {
 
     /// Classifies items and orders them by section: hidden, visible, unknown.
     /// Within a section, left-to-right as on the menu bar, then by name.
+    ///
+    /// With a window list, each item is judged by its copy on the notched
+    /// screen (else the primary one), and an item with no status window is
+    /// dropped: apps such as Control Center keep zero-sized accessibility
+    /// elements for items that aren't in the menu bar at all.
     public static func classifyAndSort(_ items: [ExtraItem], screens: [ScreenInfo],
-                                       appMenus: CGRect? = nil) -> [ClassifiedItem] {
-        items
-            .map { ClassifiedItem(item: $0, visibility: Geometry.visibility(of: $0.frame, screens: screens,
-                                                                            appMenus: appMenus)) }
+                                       appMenus: CGRect? = nil,
+                                       windows: [StatusWindow]? = nil) -> [ClassifiedItem] {
+        let layout = windows.map { MenuBarLayout(windows: $0, screens: screens) }
+        let target = screens.firstIndex { $0.notch != nil } ?? 0
+        let named = layout?.windowsByName(for: items, preferring: target) ?? [:]
+        let claimed = Set(named.values.map(\.id))
+        return items
+            .compactMap { item -> ClassifiedItem? in
+                guard let layout, let frame = item.frame else {
+                    return ClassifiedItem(item: item, visibility: Geometry.visibility(of: item.frame, screens: screens,
+                                                                                     appMenus: appMenus))
+                }
+                guard frame.width > 0, frame.height > 0 else { return nil }
+                let copies = layout.copies(of: named[item.id]?.frame ?? frame)
+                guard let judged = copies[target] ?? copies.values.first else { return nil }
+                // A window named for one app isn't another item's, wherever its frame says.
+                if named[item.id] == nil, claimed.contains(judged.id) { return nil }
+                let visibility = Geometry.visibility(of: judged.frame, screens: screens, appMenus: appMenus,
+                                                     window: judged)
+                let drawn = judged.isOnscreen ? judged : copies.values.first(where: \.isOnscreen) ?? judged
+                return ClassifiedItem(item: item, visibility: visibility, windowID: drawn.id, frame: judged.frame)
+            }
             .sorted(by: precedes)
+    }
+
+    /// Orders items as the menu bar adds them, left to right: apps first, the
+    /// most recently launched leftmost (an unknown launch counts as newest),
+    /// then Apple's own items on the right. An app's items keep their places.
+    public static func inMenuBarOrder(_ items: [ClassifiedItem], launchDates: [Int32: Date]) -> [ClassifiedItem] {
+        func isSystem(_ entry: ClassifiedItem) -> Bool { entry.item.bundleID?.hasPrefix("com.apple.") ?? false }
+        return items.sorted { a, b in
+            let systemA = isSystem(a), systemB = isSystem(b)
+            if systemA != systemB { return systemB }
+            if !systemA {
+                let launchA = launchDates[a.item.pid] ?? .distantFuture
+                let launchB = launchDates[b.item.pid] ?? .distantFuture
+                if launchA != launchB { return launchA > launchB }
+            }
+            return (a.frame?.minX ?? .greatestFiniteMagnitude) < (b.frame?.minX ?? .greatestFiniteMagnitude)
+        }
     }
 
     static func precedes(_ a: ClassifiedItem, _ b: ClassifiedItem) -> Bool {
         let sectionA = a.visibility.section
         let sectionB = b.visibility.section
         if sectionA != sectionB { return sectionA < sectionB }
-        let xA = a.item.frame?.minX ?? .greatestFiniteMagnitude
-        let xB = b.item.frame?.minX ?? .greatestFiniteMagnitude
+        let xA = a.frame?.minX ?? .greatestFiniteMagnitude
+        let xB = b.frame?.minX ?? .greatestFiniteMagnitude
         if xA != xB { return xA < xB }
         let nameOrder = a.item.displayName.localizedCaseInsensitiveCompare(b.item.displayName)
         if nameOrder != .orderedSame { return nameOrder == .orderedAscending }

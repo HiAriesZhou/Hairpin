@@ -224,3 +224,312 @@ final class ExtraListTests: XCTestCase {
         XCTAssertEqual(ExtraList.classifyAndSort(items, screens: [builtIn]).map(\.id), ["1", "2", "3"])
     }
 }
+
+/// Status windows are a few points wider and taller than the button that
+/// Accessibility reports: `window(x:)` draws the item at `item(x:)`.
+private func window(_ id: UInt32, x: CGFloat, width: CGFloat = 24, y: CGFloat = 0, onscreen: Bool = true) -> StatusWindow {
+    StatusWindow(id: id, frame: CGRect(x: x - 3, y: y, width: width + 6, height: 33), isOnscreen: onscreen)
+}
+
+/// An external display above the built-in one, whose menu bar row repeats the
+/// built-in row against its own right edge.
+private let external = ScreenInfo(frame: CGRect(x: -216, y: -1080, width: 1920, height: 1080))
+
+final class MenuBarLayoutTests: XCTestCase {
+    func testCopiesFindTheWindowAroundTheButton() {
+        let layout = MenuBarLayout(windows: [window(1, x: 1000), window(2, x: 1200), window(3, x: 1300)],
+                                   screens: [builtIn])
+        XCTAssertEqual(layout.copies(of: CGRect(x: 1200, y: 4.5, width: 24, height: 24)).mapValues(\.id), [0: 2])
+    }
+
+    func testCopiesIgnoreWindowsThatDontHoldTheButton() {
+        let layout = MenuBarLayout(windows: [window(1, x: 1250), window(2, x: 1200, y: 400)], screens: [builtIn])
+        XCTAssertTrue(layout.copies(of: CGRect(x: 1200, y: 4.5, width: 24, height: 24)).isEmpty)
+    }
+
+    func testCopiesMatchByPositionFromTheRightOnEveryScreen() {
+        // The built-in row overflows: its leftmost item is ordered out.
+        let windows = [
+            window(1, x: 1440), window(2, x: 1400, width: 30), window(3, x: 1360, onscreen: false),
+            window(11, x: 1674, y: -1080), window(12, x: 1634, width: 30, y: -1080), window(13, x: 1594, y: -1080),
+        ]
+        let layout = MenuBarLayout(windows: windows, screens: [builtIn, external])
+        let fromExternal = layout.copies(of: CGRect(x: 1594, y: -1076, width: 24, height: 24))
+        XCTAssertEqual(fromExternal.mapValues(\.id), [0: 3, 1: 13])
+        let fromBuiltIn = layout.copies(of: CGRect(x: 1400, y: 4, width: 30, height: 24))
+        XCTAssertEqual(fromBuiltIn.mapValues(\.id), [0: 2, 1: 12])
+    }
+
+    func testCopiesIncludeARowParkedAboveItsScreen() {
+        // A hidden (auto-hiding or full screen) menu bar parks its row above the screen.
+        let windows = [window(1, x: 1440), window(11, x: 1674, y: -1142, onscreen: false)]
+        let layout = MenuBarLayout(windows: windows, screens: [builtIn, external])
+        XCTAssertEqual(layout.copies(of: CGRect(x: 1674, y: -1139, width: 24, height: 24)).mapValues(\.id),
+                       [0: 1, 1: 11])
+    }
+
+    func testCopiesTolerateAButtonReportedAFewPointsOff() {
+        // Accessibility can lag a relayout by a few points; most of the button
+        // still overlaps its window.
+        let layout = MenuBarLayout(windows: [window(1, x: 830), window(2, x: 800)], screens: [builtIn])
+        XCTAssertEqual(layout.copies(of: CGRect(x: 824, y: 4.5, width: 29, height: 24)).mapValues(\.id), [0: 1])
+    }
+
+    func testCopiesFollowAnItemThatOverflowReordered() {
+        // The built-in row ran out of room for Telegram (30 wide) but still fit
+        // T1 (27 wide) further right, so the two swap places across screens.
+        let windows = [
+            window(1, x: 1430, width: 34), window(2, x: 1400, width: 21), window(3, x: 1370, onscreen: false),
+            window(11, x: 1664, width: 34, y: -1080), window(12, x: 1634, y: -1080), window(13, x: 1604, width: 21, y: -1080),
+        ]
+        let layout = MenuBarLayout(windows: windows, screens: [builtIn, external])
+        XCTAssertEqual(layout.copies(of: CGRect(x: 1634, y: -1076, width: 24, height: 24)).mapValues(\.id),
+                       [0: 3, 1: 12])
+        XCTAssertEqual(layout.copies(of: CGRect(x: 1604, y: -1076, width: 21, height: 24)).mapValues(\.id),
+                       [0: 2, 1: 13])
+    }
+
+    func testCopiesFallBackToTheSameScreensRowWhenItMoved() {
+        // Accessibility still reports the shown row after the menu bar parked it.
+        let windows = [window(1, x: 1440), window(11, x: 1674, y: -1142, onscreen: false)]
+        let layout = MenuBarLayout(windows: windows, screens: [builtIn, external])
+        XCTAssertEqual(layout.copies(of: CGRect(x: 1674, y: -1076, width: 24, height: 24)).mapValues(\.id),
+                       [0: 1, 1: 11])
+    }
+
+    func testCopiesSkipARowWhoseItemHasAnotherWidth() {
+        let windows = [window(1, x: 1440, width: 40), window(11, x: 1674, y: -1080)]
+        let layout = MenuBarLayout(windows: windows, screens: [builtIn, external])
+        XCTAssertEqual(layout.copies(of: CGRect(x: 1674, y: -1076, width: 24, height: 24)).mapValues(\.id), [1: 11])
+    }
+
+    func testRowsLeaveOutTallWindows() {
+        let tall = StatusWindow(id: 9, frame: CGRect(x: 1300, y: 28, width: 353, height: 508), isOnscreen: false)
+        let layout = MenuBarLayout(windows: [window(1, x: 1440), tall], screens: [builtIn])
+        XCTAssertEqual(layout.rows[0]?.map(\.id), [1])
+    }
+}
+
+final class StatusWindowTests: XCTestCase {
+    func testOffscreenWindowOnTheMenuBarIsHidden() {
+        // macOS 26 keeps an overflowed item's window in the row but orders it out,
+        // even when it sits just right of the notch.
+        let frame = CGRect(x: 870, y: 0, width: 24, height: 32)
+        XCTAssertEqual(Geometry.visibility(of: frame, screens: [builtIn], window: window(1, x: 870, onscreen: false)),
+                       .hiddenByNotch)
+    }
+
+    func testOnscreenWindowFallsBackToGeometry() {
+        XCTAssertEqual(Geometry.visibility(of: CGRect(x: 1200, y: 0, width: 24, height: 32), screens: [builtIn],
+                                           window: window(1, x: 1200)), .visible)
+        XCTAssertEqual(Geometry.visibility(of: CGRect(x: 700, y: 0, width: 24, height: 32), screens: [builtIn],
+                                           window: window(1, x: 700)), .hiddenByNotch)
+    }
+
+    func testOffscreenWindowOffEveryScreenIsOffscreen() {
+        let frame = CGRect(x: 1200, y: -1142, width: 24, height: 32)
+        XCTAssertEqual(Geometry.visibility(of: frame, screens: [builtIn],
+                                           window: window(1, x: 1200, y: -1142, onscreen: false)), .offscreen)
+    }
+
+    func testItemsWithoutAWindowAreDropped() {
+        let items = [item("shown", x: 1200), item("phantom", x: 800), item("noFrame", x: nil),
+                     item("zero", x: 0, width: 0)]
+        let sorted = ExtraList.classifyAndSort(items, screens: [builtIn], windows: [window(7, x: 1200)])
+        XCTAssertEqual(sorted.map(\.id), ["shown", "noFrame"])
+        XCTAssertEqual(sorted.map(\.windowID), [7, nil])
+    }
+
+    func testWithoutWindowListEveryItemIsKept() {
+        let items = [item("a", x: 1200), item("b", x: 800)]
+        XCTAssertEqual(ExtraList.classifyAndSort(items, screens: [builtIn]).map(\.id), ["b", "a"])
+    }
+
+    func testHiddenOverflowListsLeftToRight() {
+        let items = [item("visible", x: 1200), item("right", x: 870), item("left", x: 700)]
+        let windows = [window(1, x: 1200), window(2, x: 870, onscreen: false), window(3, x: 700, onscreen: false)]
+        let hidden = ExtraList.classifyAndSort(items, screens: [builtIn], windows: windows).filter(\.visibility.isHidden)
+        XCTAssertEqual(hidden.map(\.id), ["left", "right"])
+    }
+
+    func testItemReportedOnAnotherScreenIsJudgedOnTheNotchedOne() {
+        // Accessibility may report an item's copy on another screen. It's judged
+        // by its copy on the notched screen, and captured from a drawn copy.
+        let windows = [window(1, x: 1440), window(3, x: 1410, onscreen: false),
+                       window(11, x: 1674, y: -1080), window(13, x: 1644, y: -1080)]
+        let items = [
+            ExtraItem(id: "shown", pid: 1, appName: "A", frame: CGRect(x: 1674, y: -1076, width: 24, height: 24)),
+            ExtraItem(id: "overflowed", pid: 1, appName: "B", frame: CGRect(x: 1644, y: -1076, width: 24, height: 24)),
+        ]
+        let sorted = ExtraList.classifyAndSort(items, screens: [builtIn, external], windows: windows)
+        XCTAssertEqual(sorted.map(\.id), ["overflowed", "shown"])
+        XCTAssertEqual(sorted.map(\.visibility), [.hiddenByNotch, .visible])
+        XCTAssertEqual(sorted.map(\.windowID), [13, 1])
+    }
+
+    func testOverflowWithoutANotchIsHiddenToo() {
+        let plain = ScreenInfo(frame: CGRect(x: 0, y: 0, width: 1512, height: 982))
+        let items = [item("a", x: 700)]
+        let sorted = ExtraList.classifyAndSort(items, screens: [plain], windows: [window(1, x: 700, onscreen: false)])
+        XCTAssertEqual(sorted.map(\.visibility), [.hiddenByNotch])
+    }
+}
+
+final class WindowNameTests: XCTestCase {
+    private func named(_ id: UInt32, x: CGFloat, width: CGFloat, name: String?, onscreen: Bool = true) -> StatusWindow {
+        StatusWindow(id: id, frame: CGRect(x: x, y: 0, width: width, height: 33), isOnscreen: onscreen, name: name)
+    }
+
+    func testNamesOverrideStalePositions() {
+        // Accessibility still has Telegram where T1 now is, and T1 where
+        // Telegram went; the window names tell them apart.
+        let windows = [named(1, x: 857, width: 27, name: "75613"),
+                       named(2, x: 827, width: 30, name: "com.tdesktop.Telegram", onscreen: false)]
+        var telegram = ExtraItem(id: "telegram", pid: 600, appName: "Telegram", bundleID: "com.tdesktop.Telegram",
+                                 frame: CGRect(x: 855, y: 4.5, width: 24, height: 24))
+        telegram.role = ExtraList.menuBarItemRole
+        let test = ExtraItem(id: "t1", pid: 75613, appName: "fill", frame: CGRect(x: 824, y: 4.5, width: 29, height: 24))
+        let sorted = ExtraList.classifyAndSort([telegram, test], screens: [builtIn], windows: windows)
+        XCTAssertEqual(sorted.map(\.id), ["telegram", "t1"])
+        XCTAssertEqual(sorted.map(\.visibility), [.hiddenByNotch, .visible])
+    }
+
+    func testSeveralItemsOfOneAppPairInOrderFromTheRight() {
+        let windows = [named(1, x: 1000, width: 30, name: "42"), named(2, x: 900, width: 30, name: "42", onscreen: false)]
+        let items = [
+            ExtraItem(id: "left", pid: 42, appName: "A", frame: CGRect(x: 880, y: 4, width: 30, height: 24)),
+            ExtraItem(id: "right", pid: 42, appName: "A", frame: CGRect(x: 960, y: 4, width: 30, height: 24)),
+        ]
+        let sorted = ExtraList.classifyAndSort(items, screens: [builtIn], windows: windows)
+        XCTAssertEqual(sorted.map(\.id), ["left", "right"])
+        XCTAssertEqual(sorted.map(\.windowID), [2, 1])
+        XCTAssertEqual(sorted.map(\.visibility), [.hiddenByNotch, .visible])
+    }
+
+    func testAWindowClaimedByNameIsntMatchedAgainByPosition() {
+        // A Control Center element with a stale frame lands on flomo's window.
+        let windows = [named(1, x: 820, width: 30, name: "com.flomoapp.m", onscreen: false)]
+        let flomo = ExtraItem(id: "flomo", pid: 5, appName: "flomo", bundleID: "com.flomoapp.m",
+                              frame: CGRect(x: 868, y: 4, width: 26, height: 24))
+        let stale = ExtraItem(id: "cc", pid: 9, appName: "Control Center", bundleID: "com.apple.controlcenter",
+                              frame: CGRect(x: 822, y: 4, width: 26, height: 24))
+        let sorted = ExtraList.classifyAndSort([flomo, stale], screens: [builtIn], windows: windows)
+        XCTAssertEqual(sorted.map(\.id), ["flomo"])
+    }
+
+    func testMismatchedCountsFallBackToPositions() {
+        let windows = [named(1, x: 1000, width: 30, name: "42")]
+        let items = [
+            ExtraItem(id: "a", pid: 42, appName: "A", frame: CGRect(x: 1000, y: 4, width: 30, height: 24)),
+            ExtraItem(id: "b", pid: 42, appName: "A", frame: CGRect(x: 700, y: 4, width: 30, height: 24)),
+        ]
+        let sorted = ExtraList.classifyAndSort(items, screens: [builtIn], windows: windows)
+        XCTAssertEqual(sorted.map(\.id), ["a"])
+        XCTAssertEqual(sorted.map(\.windowID), [1])
+    }
+}
+
+final class ActiveRowNameTests: XCTestCase {
+    func testNamesFromTheActiveMenuBarCarryToTheNotchedOne() {
+        // Only the active menu bar (here the external one) names its windows
+        // after apps; the built-in row has autosave names. flomo's stale frame
+        // sits on WeChat's built-in window, but its name on the external row
+        // finds its own.
+        let windows = [
+            StatusWindow(id: 1, frame: CGRect(x: 1400, y: 0, width: 38, height: 33), isOnscreen: true, name: "Item-0"),
+            StatusWindow(id: 2, frame: CGRect(x: 1376, y: 0, width: 24, height: 33), isOnscreen: false, name: "Item-0"),
+            StatusWindow(id: 11, frame: CGRect(x: 1634, y: -1080, width: 38, height: 33), isOnscreen: true,
+                         name: "com.tencent.xinWeChat"),
+            StatusWindow(id: 12, frame: CGRect(x: 1610, y: -1080, width: 24, height: 33), isOnscreen: true,
+                         name: "com.flomoapp.m"),
+        ]
+        let items = [
+            ExtraItem(id: "wechat", pid: 1, appName: "WeChat", bundleID: "com.tencent.xinWeChat",
+                      frame: CGRect(x: 1634, y: -1076, width: 38, height: 24)),
+            ExtraItem(id: "flomo", pid: 2, appName: "flomo", bundleID: "com.flomoapp.m",
+                      frame: CGRect(x: 1405, y: 4, width: 24, height: 24)),
+        ]
+        let sorted = ExtraList.classifyAndSort(items, screens: [builtIn, external], windows: windows)
+        XCTAssertEqual(sorted.map(\.id), ["flomo", "wechat"])
+        XCTAssertEqual(sorted.map(\.visibility), [.hiddenByNotch, .visible])
+        XCTAssertEqual(sorted.map(\.windowID), [12, 1])
+    }
+}
+
+final class LaunchOrderTests: XCTestCase {
+    private func entry(_ id: String, pid: Int32, bundleID: String?, x: CGFloat) -> ClassifiedItem {
+        ClassifiedItem(item: ExtraItem(id: id, pid: pid, appName: id, bundleID: bundleID,
+                                       frame: CGRect(x: x, y: 0, width: 24, height: 24)),
+                       visibility: .hiddenByNotch)
+    }
+
+    func testSystemItemsGoRightAndAppsLeftInLaunchOrder() {
+        let start = Date(timeIntervalSince1970: 1000)
+        let items = [
+            entry("cc", pid: 1, bundleID: "com.apple.controlcenter", x: 100),
+            entry("old", pid: 2, bundleID: "a.old", x: 300),
+            entry("new", pid: 3, bundleID: "a.new", x: 200),
+            entry("mid", pid: 4, bundleID: "a.mid", x: 400),
+        ]
+        let launched: [Int32: Date] = [2: start, 3: start + 20, 4: start + 10]
+        XCTAssertEqual(ExtraList.inMenuBarOrder(items, launchDates: launched).map(\.id), ["new", "mid", "old", "cc"])
+    }
+
+    func testAnAppsItemsKeepTheirPlaceAndUnknownLaunchesGoLeft() {
+        let start = Date(timeIntervalSince1970: 1000)
+        let items = [
+            entry("a-right", pid: 2, bundleID: "a", x: 500),
+            entry("a-left", pid: 2, bundleID: "a", x: 400),
+            entry("unknown", pid: 9, bundleID: nil, x: 900),
+        ]
+        XCTAssertEqual(ExtraList.inMenuBarOrder(items, launchDates: [2: start]).map(\.id),
+                       ["unknown", "a-left", "a-right"])
+    }
+}
+
+final class StackSlotTests: XCTestCase {
+    // builtIn: 1512 wide, notch 654…858.
+    private let leftmost = CGRect(x: 944, y: 0, width: 38, height: 33)
+
+    func testRightOfTheNotchWhenMenusAreShort() {
+        XCTAssertEqual(Geometry.stackSlot(width: 26, screens: [builtIn], screen: 0,
+                                          appMenus: CGRect(x: 0, y: 0, width: 400, height: 24),
+                                          leftmostShown: leftmost), 942)
+    }
+
+    func testAfterMenusThatRunPastTheNotch() {
+        XCTAssertEqual(Geometry.stackSlot(width: 26, screens: [builtIn], screen: 0,
+                                          appMenus: CGRect(x: 0, y: 0, width: 905, height: 24),
+                                          leftmostShown: leftmost), 942)
+    }
+
+    func testLeftOfTheNotchWhenTheRightGapIsTooNarrow() {
+        let close = CGRect(x: 870, y: 0, width: 38, height: 33)
+        XCTAssertEqual(Geometry.stackSlot(width: 26, screens: [builtIn], screen: 0,
+                                          appMenus: CGRect(x: 0, y: 0, width: 400, height: 24),
+                                          leftmostShown: close), 650)
+    }
+
+    func testNoSlotWhenMenusFillUpToTheItems() {
+        XCTAssertNil(Geometry.stackSlot(width: 26, screens: [builtIn], screen: 0,
+                                        appMenus: CGRect(x: 0, y: 0, width: 930, height: 24),
+                                        leftmostShown: leftmost))
+    }
+
+    func testMenusReadOnAnotherScreenKeepTheirWidth() {
+        let external = ScreenInfo(frame: CGRect(x: -1920, y: 0, width: 1920, height: 1080))
+        XCTAssertNil(Geometry.stackSlot(width: 26, screens: [external, builtIn], screen: 1,
+                                        appMenus: CGRect(x: -1920, y: 0, width: 930, height: 24),
+                                        leftmostShown: leftmost))
+    }
+
+    func testWithoutANotchOnlyAfterTheMenus() {
+        let plain = ScreenInfo(frame: CGRect(x: 0, y: 0, width: 1512, height: 982))
+        XCTAssertEqual(Geometry.stackSlot(width: 26, screens: [plain], screen: 0,
+                                          appMenus: CGRect(x: 0, y: 0, width: 400, height: 24),
+                                          leftmostShown: leftmost), 942)
+        XCTAssertNil(Geometry.stackSlot(width: 26, screens: [plain], screen: 0,
+                                        appMenus: CGRect(x: 0, y: 0, width: 930, height: 24),
+                                        leftmostShown: leftmost))
+    }
+}

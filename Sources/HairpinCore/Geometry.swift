@@ -85,11 +85,20 @@ public enum Geometry {
     /// Classifies a menu bar item frame (Quartz coordinates).
     ///
     /// `appMenus` is the extent of the frontmost app's menus (Apple menu
-    /// through its last menu), if it could be read.
+    /// through its last menu), if it could be read. `window` is the status
+    /// window drawing the item, if the window list was read.
     public static func visibility(of frame: CGRect?, screens: [ScreenInfo], appMenus: CGRect? = nil,
+                                  window: StatusWindow? = nil,
                                   minimumVisibleFraction: CGFloat = 0.5) -> ItemVisibility {
         guard let frame else { return .unknown }
         guard frame.width > 0, frame.height > 0 else { return .offscreen }
+
+        // The window server knows best: an ordered-out window in a menu bar row
+        // is an overflowed item, wherever the notch is.
+        if let window, !window.isOnscreen {
+            let onScreen = screens.contains { $0.frame.intersects(frame) }
+            return onScreen ? .hiddenByNotch : .offscreen
+        }
 
         // App menus start at the left edge of the screen they're on, and every
         // menu bar shows the same menus, so their width carries across screens.
@@ -120,5 +129,33 @@ public enum Geometry {
             return overlap.isNull ? sum : sum + overlap.width * overlap.height
         }
         return visibleArea / area < minimumVisibleFraction ? .offscreen : .visible
+    }
+
+    /// Where a stack of hidden items `width` wide fits in a screen's menu bar
+    /// without covering anything: the right edge of the slot (Quartz), or nil
+    /// when there's no room.
+    ///
+    /// The first choice is where the next overflowing item would have gone:
+    /// left of the leftmost shown item, right of the notch and of the
+    /// frontmost app's menus (long menus continue past the notch). Failing
+    /// that, on a notched screen whose menus end before the notch, just left
+    /// of the notch.
+    public static func stackSlot(width: CGFloat, screens: [ScreenInfo], screen index: Int, appMenus: CGRect?,
+                                 leftmostShown: CGRect?, margin: CGFloat = 4) -> CGFloat? {
+        guard screens.indices.contains(index), let leftmost = leftmostShown else { return nil }
+        let screen = screens[index]
+        // Every menu bar shows the same menus from its left edge.
+        let menusEnd = appMenus.flatMap { menus in
+            screens.first { $0.frame.contains(CGPoint(x: menus.minX, y: menus.midY)) }
+                .map { screen.frame.minX + menus.maxX - $0.frame.minX }
+        }
+        let rightEdge = leftmost.minX - 2
+        let rightStart = max(screen.notch?.maxX ?? -.greatestFiniteMagnitude,
+                             menusEnd ?? -.greatestFiniteMagnitude) + margin
+        if rightEdge - rightStart >= width { return rightEdge }
+        guard let notch = screen.notch, (menusEnd ?? screen.frame.minX) < notch.minX else { return nil }
+        let leftStart = (menusEnd ?? screen.frame.minX) + margin
+        let leftEdge = notch.minX - margin
+        return leftEdge - leftStart >= width ? leftEdge : nil
     }
 }
