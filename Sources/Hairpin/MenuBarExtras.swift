@@ -31,6 +31,8 @@ enum MenuBarExtras {
         var extras: [LiveExtra]
         /// Union of the menu bar owner's menu frames (Quartz), if readable.
         var appMenus: CGRect?
+        /// Every status item window; empty if the window list couldn't be read.
+        var windows: [StatusWindow]
     }
 
     /// Every running app except our own.
@@ -54,7 +56,22 @@ enum MenuBarExtras {
         }
         let ownPID = ProcessInfo.processInfo.processIdentifier
         let menus = menuBarOwner.flatMap { $0 == ownPID ? nil : menuFrame(pid: $0) }
-        return Scan(extras: results.items, appMenus: menus)
+        return Scan(extras: results.items, appMenus: menus, windows: statusWindows())
+    }
+
+    /// Status item windows of every app, onscreen or not. Bounds and the
+    /// onscreen flag need no Screen Recording permission; names do.
+    private static func statusWindows() -> [StatusWindow] {
+        let level = Int(CGWindowLevelForKey(.statusWindow))
+        guard let list = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]] else { return [] }
+        return list.compactMap { info in
+            guard info[kCGWindowLayer as String] as? Int == level,
+                  let id = info[kCGWindowNumber as String] as? CGWindowID,
+                  let bounds = info[kCGWindowBounds as String] as? NSDictionary,
+                  let frame = CGRect(dictionaryRepresentation: bounds) else { return nil }
+            return StatusWindow(id: id, frame: frame, isOnscreen: info[kCGWindowIsOnscreen as String] as? Bool ?? false,
+                                name: info[kCGWindowName as String] as? String)
+        }
     }
 
     /// `@unchecked`: all access to `items` goes through `lock`, except the
@@ -175,5 +192,34 @@ enum Screens {
                 notch: notch.map { Geometry.quartzRect(fromCocoa: $0, primaryScreenHeight: primaryHeight) }
             )
         }
+    }
+
+    /// Where the hidden items are kept, on the notched screen (else the
+    /// primary one), at the left end of the shown items: Hairpin's own icon
+    /// when it's the leftmost one (its frame is `own`, Quartz); else the pin
+    /// in the first slot that covers neither the frontmost app's menus nor
+    /// any item (see `Geometry.stackSlot`); else the pin on the leftmost
+    /// item. Nil while that menu bar is hidden (full screen, auto-hide).
+    @MainActor
+    static func stackAnchor(screens: [ScreenInfo], windows: [StatusWindow], appMenus: CGRect?,
+                            own: CGRect?) -> StackAnchor? {
+        let index = screens.firstIndex { $0.notch != nil } ?? 0
+        guard index < NSScreen.screens.count else { return nil }
+        let screen = NSScreen.screens[index]
+        let menuBarHeight = screen.frame.maxY - screen.visibleFrame.maxY
+        guard menuBarHeight > 0 else { return nil }
+        let row = NSRect(x: screen.frame.minX, y: screen.frame.maxY - menuBarHeight,
+                         width: screen.frame.width, height: menuBarHeight)
+        let shown = MenuBarLayout(windows: windows, screens: screens).row(index).filter(\.isOnscreen)
+        guard let leftmost = shown.last?.frame else { return nil }
+        if let own, abs(own.minX - leftmost.minX) <= 2 {
+            return StackAnchor(place: .button, row: row)
+        }
+        let width = NotchStack.pileWidth
+        if let edge = Geometry.stackSlot(width: width, screens: screens, screen: index, appMenus: appMenus,
+                                         leftmostShown: leftmost) {
+            return StackAnchor(place: .slot(minX: edge - width, width: width), row: row)
+        }
+        return StackAnchor(place: .slot(minX: leftmost.minX, width: leftmost.width), row: row, covered: leftmost)
     }
 }
