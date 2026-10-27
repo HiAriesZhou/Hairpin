@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Builds Hairpin in release mode and packages Hairpin.app + Hairpin.zip
 # in the repository root. Usage: VERSION=0.1.0 scripts/bundle.sh
+# SIGN_IDENTITY picks a signing identity (default "-", ad-hoc). Signing local
+# builds with a stable identity, e.g. "Apple Development", keeps macOS
+# privacy grants (Accessibility, Screen Recording) across rebuilds.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -79,8 +82,9 @@ PLIST
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 plutil -lint "$APP/Contents/Info.plist"
 
-echo "==> Ad-hoc signing"
-codesign --force --deep -s - "$APP"
+SIGN_IDENTITY="${SIGN_IDENTITY:--}"
+echo "==> Signing (${SIGN_IDENTITY/#-/ad-hoc})"
+codesign --force --deep -s "$SIGN_IDENTITY" "$APP"
 codesign --verify --verbose=2 "$APP"
 
 echo "==> Zipping $ZIP"
