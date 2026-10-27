@@ -39,14 +39,18 @@ public struct ClassifiedItem: Equatable, Identifiable, Sendable {
     /// A status window drawing the item, if the window list was read: one
     /// that's onscreen if there is one, to capture the item's look from.
     public var windowID: UInt32?
+    /// The item's window on the screen it was judged on.
+    public var judgedWindowID: UInt32?
     /// Where the item is on the screen it was judged on.
     public var frame: CGRect?
     public var id: String { item.id }
 
-    public init(item: ExtraItem, visibility: ItemVisibility, windowID: UInt32? = nil, frame: CGRect? = nil) {
+    public init(item: ExtraItem, visibility: ItemVisibility, windowID: UInt32? = nil,
+                judgedWindowID: UInt32? = nil, frame: CGRect? = nil) {
         self.item = item
         self.visibility = visibility
         self.windowID = windowID
+        self.judgedWindowID = judgedWindowID
         self.frame = frame ?? item.frame
     }
 }
@@ -92,8 +96,14 @@ public enum ExtraList {
     public static func classifyAndSort(_ items: [ExtraItem], screens: [ScreenInfo],
                                        appMenus: CGRect? = nil,
                                        windows: [StatusWindow]? = nil) -> [ClassifiedItem] {
-        let layout = windows.map { MenuBarLayout(windows: $0, screens: screens) }
-        let target = screens.firstIndex { $0.notch != nil } ?? 0
+        classifyAndSort(items, screens: screens, appMenus: appMenus,
+                        layout: windows.map { MenuBarLayout(windows: $0, screens: screens) })
+    }
+
+    /// The same, with the window list already laid out in rows.
+    public static func classifyAndSort(_ items: [ExtraItem], screens: [ScreenInfo], appMenus: CGRect?,
+                                       layout: MenuBarLayout?) -> [ClassifiedItem] {
+        let target = MenuBarLayout.targetScreen(in: screens)
         let named = layout?.windowsByName(for: items, preferring: target) ?? [:]
         let claimed = Set(named.values.map(\.id))
         return items
@@ -110,7 +120,8 @@ public enum ExtraList {
                 let visibility = Geometry.visibility(of: judged.frame, screens: screens, appMenus: appMenus,
                                                      window: judged)
                 let drawn = judged.isOnscreen ? judged : copies.values.first(where: \.isOnscreen) ?? judged
-                return ClassifiedItem(item: item, visibility: visibility, windowID: drawn.id, frame: judged.frame)
+                return ClassifiedItem(item: item, visibility: visibility, windowID: drawn.id,
+                                      judgedWindowID: judged.id, frame: judged.frame)
             }
             .sorted(by: precedes)
     }

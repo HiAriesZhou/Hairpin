@@ -61,7 +61,7 @@ enum MenuBarExtras {
 
     /// Status item windows of every app, onscreen or not. Bounds and the
     /// onscreen flag need no Screen Recording permission; names do.
-    private static func statusWindows() -> [StatusWindow] {
+    static func statusWindows() -> [StatusWindow] {
         let level = Int(CGWindowLevelForKey(.statusWindow))
         guard let list = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]] else { return [] }
         return list.compactMap { info in
@@ -194,32 +194,31 @@ enum Screens {
         }
     }
 
-    /// Where the hidden items are kept, on the notched screen (else the
-    /// primary one), at the left end of the shown items: Hairpin's own icon
-    /// when it's the leftmost one (its frame is `own`, Quartz); else the pin
-    /// in the first slot that covers neither the frontmost app's menus nor
-    /// any item (see `Geometry.stackSlot`); else the pin on the leftmost
-    /// item. Nil while that menu bar is hidden (full screen, auto-hide).
+    /// Where the hidden items are kept in the target screen's menu bar (see
+    /// `MenuBarLayout.placement`), in Cocoa coordinates; `own` is Hairpin's
+    /// icon frame (Quartz) and `coverable` the windows of known shown items.
+    /// Nil while that menu bar isn't showing, or with no place for the pin.
     @MainActor
-    static func stackAnchor(screens: [ScreenInfo], windows: [StatusWindow], appMenus: CGRect?,
-                            own: CGRect?) -> StackAnchor? {
-        let index = screens.firstIndex { $0.notch != nil } ?? 0
-        guard index < NSScreen.screens.count else { return nil }
-        let screen = NSScreen.screens[index]
-        let menuBarHeight = screen.frame.maxY - screen.visibleFrame.maxY
-        guard menuBarHeight > 0 else { return nil }
-        let row = NSRect(x: screen.frame.minX, y: screen.frame.maxY - menuBarHeight,
-                         width: screen.frame.width, height: menuBarHeight)
-        let shown = MenuBarLayout(windows: windows, screens: screens).row(index).filter(\.isOnscreen)
-        guard let leftmost = shown.last?.frame else { return nil }
-        if let own, abs(own.minX - leftmost.minX) <= 2 {
+    static func stackAnchor(layout: MenuBarLayout, screens: [ScreenInfo], appMenus: CGRect?, own: CGRect?,
+                            coverable: Set<UInt32>) -> StackAnchor? {
+        let index = MenuBarLayout.targetScreen(in: screens)
+        // `screens` comes from `current()`, in NSScreen.screens order.
+        guard index < NSScreen.screens.count,
+              let placement = layout.placement(width: NotchStack.pinWidth, screen: index, appMenus: appMenus,
+                                               own: own, coverable: coverable) else { return nil }
+        let screen = NSScreen.screens[index].frame
+        // The row's windows are as tall as the menu bar; visibleFrame says
+        // nothing when the menu bar hides itself.
+        let height = layout.row(index).map(\.frame.height).max() ?? NSStatusBar.system.thickness
+        let row = NSRect(x: screen.minX, y: screen.maxY - height, width: screen.width, height: height)
+        switch placement {
+        case .ownIcon:
             return StackAnchor(place: .button, row: row)
+        case let .slot(rightEdge):
+            return StackAnchor(place: .slot(minX: rightEdge - NotchStack.pinWidth, width: NotchStack.pinWidth), row: row)
+        case let .covering(window):
+            return StackAnchor(place: .slot(minX: window.frame.minX, width: window.frame.width), row: row,
+                               covered: window.id)
         }
-        let width = NotchStack.pileWidth
-        if let edge = Geometry.stackSlot(width: width, screens: screens, screen: index, appMenus: appMenus,
-                                         leftmostShown: leftmost) {
-            return StackAnchor(place: .slot(minX: edge - width, width: width), row: row)
-        }
-        return StackAnchor(place: .slot(minX: leftmost.minX, width: leftmost.width), row: row, covered: leftmost)
     }
 }

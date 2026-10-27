@@ -59,6 +59,50 @@ public struct MenuBarLayout {
         rows[screen] ?? []
     }
 
+    /// The windows of every row; status-level windows that aren't menu bar
+    /// items are left out.
+    public var allRows: [StatusWindow] {
+        rows.values.flatMap { $0 }
+    }
+
+    /// The screen whose menu bar items are judged: the notched one, else the
+    /// primary one.
+    public static func targetScreen(in screens: [ScreenInfo]) -> Int {
+        screens.firstIndex { $0.notch != nil } ?? 0
+    }
+
+    /// Whether a screen's menu bar is showing: its row sits at the top of the
+    /// screen rather than parked above it (auto-hide, full screen).
+    public func isShowing(_ screen: Int) -> Bool {
+        guard screens.indices.contains(screen), let window = row(screen).first else { return false }
+        return abs(window.frame.minY - screens[screen].frame.minY) <= 2
+    }
+
+    /// Where the pin holding the hidden items goes in a screen's menu bar, at
+    /// the left end of the items shown there; nil while that menu bar isn't
+    /// showing, or when there's no room and nothing it may sit on.
+    ///
+    /// Hairpin's own icon (`own`) holds them when it's the leftmost shown
+    /// item. Otherwise the pin, `width` wide, takes the first free slot (see
+    /// `Geometry.stackSlot`); failing that, it sits on the leftmost shown
+    /// window in `coverable` (windows of known items, which are then listed
+    /// with the hidden ones). Shown means drawn where it can be seen: before
+    /// macOS 26 an overflowed window is still drawn, under the notch.
+    public func placement(width: CGFloat, screen: Int, appMenus: CGRect?, own: CGRect?,
+                          coverable: Set<UInt32>) -> StackPlacement? {
+        guard isShowing(screen) else { return nil }
+        let shown = row(screen).filter { window in
+            Geometry.visibility(of: window.frame, screens: screens, appMenus: appMenus, window: window) == .visible
+        }
+        guard let leftmost = shown.last else { return nil }
+        if let own, abs(own.minX - leftmost.frame.minX) <= 2 { return .ownIcon }
+        if let edge = Geometry.stackSlot(width: width, screens: screens, screen: screen, appMenus: appMenus,
+                                         leftmostShown: leftmost.frame, margin: 2) {
+            return .slot(rightEdge: edge)
+        }
+        return shown.reversed().first { coverable.contains($0.id) }.map(StackPlacement.covering)
+    }
+
     /// Each item's window, found by the window names rather than by position:
     /// Accessibility can keep reporting where an item was before the row was
     /// relaid out. Only the active menu bar names its windows after apps
@@ -129,4 +173,14 @@ public struct MenuBarLayout {
             .min { $0.distance < $1.distance }?
             .index
     }
+}
+
+/// Where the pin holding the hidden items goes; see `MenuBarLayout.placement`.
+public enum StackPlacement: Equatable, Sendable {
+    /// Hairpin's own icon is the leftmost shown item and holds them.
+    case ownIcon
+    /// A free slot ending at this x (Quartz).
+    case slot(rightEdge: CGFloat)
+    /// On this shown item's window, for lack of room.
+    case covering(StatusWindow)
 }

@@ -20,28 +20,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var kept: [ClassifiedItem] = []
     /// The extras behind `hidden`, by item id.
     private var extras: [String: LiveExtra] = [:]
-    /// Real-look icons by item id, kept across scans. A hidden item's window
-    /// isn't drawn, so its look is captured while it's still shown.
-    private var captured: [String: NSImage] = [:]
-    /// Gray app icons by PID, for items without a captured look.
-    private var grayIcons: [pid_t: NSImage] = [:]
-    private var isCapturing = false
-    /// Items already tried, so one that comes out blank isn't captured again.
-    private var attempted: Set<String> = []
-    private var captureTimer: Timer?
-    /// Lets a burst of menu bar changes settle into one capture.
-    private static let captureDelay: TimeInterval = 1.5
-    /// How often an item that comes out empty is tried again.
-    private static let captureRetries = 2
-    private var misses: [String: Int] = [:]
+    private let looks = ItemLooks()
     /// Where the stack goes, from the latest scan.
     private var anchor: StackAnchor?
     private var isScanning = false
     private var scanAgain = false
+    /// The menu bar rows' windows as last seen, which a cheap poll compares
+    /// against: apps add, drop and resize menu bar items, and menu bars hide
+    /// and show, without any notification.
+    private var windowStates: [WindowState] = []
+    private var menuBarWatch: Timer?
+    /// The latest Accessibility scan, replayed against fresh window lists.
+    private var lastScan: MenuBarExtras.Scan?
+    private var lastWatchScan = Date.distantPast
+    private var watchScanPending = false
+    private var appearanceObservation: NSKeyValueObservation?
     private let scanQueue = DispatchQueue(label: "com.hiarieszhou.hairpin.scan", qos: .userInitiated)
 
     private static let autosaveName = "Hairpin"
     private static let menusSettleDelay: TimeInterval = 0.4
+    private static let menuBarWatchInterval: TimeInterval = 0.5
+    /// The fewest seconds between Accessibility scans the watch starts.
+    private static let watchScanInterval: TimeInterval = 2
     private static let openOnHoverKey = "OpenOnHover"
     /// The macOS 13+ Privacy & Security pane first, the legacy pane id second.
     private static let accessibilitySettingsURLs = [
@@ -79,6 +79,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         NotificationCenter.default.addObserver(self, selector: #selector(environmentChanged(_:)),
                                                name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        menuBarWatch = Timer.scheduledTimer(withTimeInterval: Self.menuBarWatchInterval, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.checkMenuBar() }
+        }
+        menuBarWatch?.tolerance = Self.menuBarWatchInterval / 2
+        // The pin follows the menu bar between light and dark.
+        appearanceObservation = statusItem.button?.observe(\.effectiveAppearance) { [weak self] _, _ in
+            DispatchQueue.main.async { self?.updateStack() }
+        }
 
         if MenuBarExtras.isTrusted {
             refresh()
@@ -89,15 +97,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     /// Opening Hairpin.app again (Finder, Spotlight, Launchpad) while it runs
-    /// fans out the hidden items, or shows the menu at the pointer when none
-    /// are hidden: a way in if our own icon is hidden.
+    /// opens the hidden items, under the pin or, with no pin showing, at the
+    /// pointer; with none hidden it shows the menu at the pointer. A way in
+    /// when our icon is out of sight.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         Task {
-            if self.hidden?.isEmpty == false {
-                self.stack.expand(pinned: true)
-            } else {
-                _ = self.menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
-            }
+            let opened = self.hidden?.isEmpty == false
+                && (self.stack.expand(pinned: true) || self.stack.expandAtPointer())
+            if !opened { _ = self.menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil) }
         }
         return false
     }
@@ -130,7 +137,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// Starts a background scan. A request made while one is running queues
     /// one more, so the result always reflects the latest state.
     private func refresh() {
-        guard MenuBarExtras.isTrusted else { return }
+        guard MenuBarExtras.isTrusted else {
+            // Without access the snapshot goes stale; don't leave the pin
+            // behind, and start over once access is back.
+            windowStates = []
+            lastScan = nil
+            if hidden != nil {
+                hidden = nil
+                anchor = nil
+                extras = [:]
+                updateStack()
+            }
+            return
+        }
         guard !isScanning else {
             scanAgain = true
             return
@@ -146,23 +165,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func finish(_ scan: MenuBarExtras.Scan) {
         isScanning = false
+        lastScan = scan
+        apply(scan)
+        if scanAgain {
+            scanAgain = false
+            refresh()
+        }
+    }
+
+    /// Works out what's hidden and where the pin goes from a scan's items and
+    /// window list, then redraws.
+    private func apply(_ scan: MenuBarExtras.Scan) {
         let ownBundleID = Bundle.main.bundleIdentifier.map { Set([$0]) } ?? []
         let items = ExtraList.filter(scan.extras.map(\.item),
                                      excludingPIDs: [ProcessInfo.processInfo.processIdentifier],
                                      excludingBundleIDs: ownBundleID)
         let screens = Screens.current()
-        let sorted = ExtraList.classifyAndSort(items, screens: screens, appMenus: scan.appMenus,
-                                               windows: scan.windows.isEmpty ? nil : scan.windows)
+        let layout = scan.windows.isEmpty ? nil : MenuBarLayout(windows: scan.windows, screens: screens)
+        let sorted = ExtraList.classifyAndSort(items, screens: screens, appMenus: scan.appMenus, layout: layout)
         logScan(items: items, sorted: sorted, windows: scan.windows)
         kept = sorted
+        windowStates = layout.map(WindowState.of) ?? []
         let ownFrame = (statusItem.button?.window?.frame).map { frame in
             Geometry.quartzRect(fromCocoa: frame, primaryScreenHeight: NSScreen.screens.first?.frame.height ?? 0)
         }
-        anchor = Screens.stackAnchor(screens: screens, windows: scan.windows, appMenus: scan.appMenus, own: ownFrame)
-        // The item under the pin, if it had to sit on one, is kept with the hidden ones.
-        let covered = anchor?.covered.flatMap { covered in
-            sorted.first { !$0.visibility.isHidden && abs(($0.frame?.minX ?? .infinity) - covered.minX) <= 2 }
+        let shown = sorted.filter { !$0.visibility.isHidden }
+        anchor = layout.flatMap { layout in
+            Screens.stackAnchor(layout: layout, screens: screens, appMenus: scan.appMenus, own: ownFrame,
+                                coverable: Set(shown.compactMap(\.judgedWindowID)))
         }
+        // The item under the pin, if it had to sit on one, is kept with the hidden ones.
+        let covered = anchor?.covered.flatMap { window in shown.first { $0.judgedWindowID == window } }
         let overflowed = sorted.filter(\.visibility.isHidden) + (covered.map { [$0] } ?? [])
         let launchDates = Dictionary(overflowed.compactMap { entry in
             NSRunningApplication(processIdentifier: entry.item.pid)?.launchDate.map { (entry.item.pid, $0) }
@@ -174,12 +207,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             covering: \(covered?.item.appName ?? "-", privacy: .public), \
             app menus end at \(scan.appMenus.map { "\($0.maxX)" } ?? "?", privacy: .public)
             """)
+        looks.forget(exceptWindows: Set(scan.windows.map(\.id)),
+                     pids: Set(NSWorkspace.shared.runningApplications.map(\.processIdentifier)))
         updateStack()
-        scheduleCapture()
-        if scanAgain {
-            scanAgain = false
-            refresh()
-        }
+        looks.capture(from: sorted) { [weak self] in self?.updateStack() }
     }
 
     /// Debug-level only: `log stream --level debug --predicate 'subsystem == "com.hiarieszhou.hairpin"'`.
@@ -194,6 +225,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 window=\(entry?.windowID.map(String.init) ?? "-", privacy: .public) \
                 visibility=\(entry.map { "\($0.visibility)" } ?? "dropped", privacy: .public)
                 """)
+        }
+    }
+
+    /// Follows the menu bar rows between scans. When their windows moved or
+    /// changed whether they're drawn (a menu bar hiding or showing, an item
+    /// overflowing), the last scan's items are replayed against the fresh
+    /// window list right away. When windows came or went (an item added or
+    /// dropped), a new Accessibility scan finds out what they are, at most
+    /// every couple of seconds. The window list is cheap; the scan isn't.
+    private func checkMenuBar() {
+        guard MenuBarExtras.isTrusted else {
+            if hidden != nil || !windowStates.isEmpty { refresh() }
+            return
+        }
+        guard !isScanning else { return }
+        scanQueue.async {
+            let windows = MenuBarExtras.statusWindows()
+            Task { @MainActor in self.compare(windows) }
+        }
+    }
+
+    private func compare(_ windows: [StatusWindow]) {
+        let states = WindowState.of(MenuBarLayout(windows: windows, screens: Screens.current()))
+        guard states != windowStates, !isScanning else { return }
+        let sameWindows = Set(states.map(\.id)) == Set(windowStates.map(\.id))
+        if let scan = lastScan {
+            apply(MenuBarExtras.Scan(extras: scan.extras, appMenus: scan.appMenus, windows: windows))
+        }
+        if !sameWindows { scheduleWatchScan() }
+    }
+
+    /// Scans as soon as the last scan the watch started is a couple of
+    /// seconds old; one waiting scan covers every change until it runs.
+    private func scheduleWatchScan() {
+        guard !watchScanPending else { return }
+        watchScanPending = true
+        let wait = max(0, Self.watchScanInterval - Date().timeIntervalSince(lastWatchScan))
+        DispatchQueue.main.asyncAfter(deadline: .now() + wait) { [weak self] in
+            guard let self else { return }
+            self.watchScanPending = false
+            self.lastWatchScan = Date()
+            self.refresh()
         }
     }
 
@@ -217,56 +290,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func stackEntries() -> [StackEntry] {
         (hidden ?? []).compactMap { entry in
-            let image = captured[entry.item.id] ?? {
-                if grayIcons[entry.item.pid] == nil { grayIcons[entry.item.pid] = icon(for: entry.item.pid, size: 18) }
-                return grayIcons[entry.item.pid]
-            }()
-            guard let image else { return nil }
-            return StackEntry(id: entry.item.id, image: image, toolTip: entry.item.displayName)
-        }
-    }
-
-    /// Captures the look of shown items not tried yet, so it's at hand once
-    /// they overflow, after the menu bar settles. Capturing turns on the
-    /// screen recording indicator, so it happens only when new items show up.
-    private func scheduleCapture() {
-        captureTimer?.invalidate()
-        captureTimer = nil
-        guard IconCapture.isAvailable, !pendingCaptures().isEmpty else { return }
-        captureTimer = Timer.scheduledTimer(withTimeInterval: Self.captureDelay, repeats: false) { [weak self] _ in
-            MainActor.assumeIsolated { self?.captureIcons() }
-        }
-    }
-
-    private func pendingCaptures() -> [ClassifiedItem] {
-        kept.filter { !$0.visibility.isHidden && $0.windowID != nil && !attempted.contains($0.id) }
-    }
-
-    private func captureIcons() {
-        guard #available(macOS 14, *), IconCapture.isAvailable, !isCapturing else { return }
-        let wanted = pendingCaptures()
-        guard !wanted.isEmpty else { return }
-        let owners = Dictionary(wanted.compactMap { entry in entry.windowID.map { ($0, entry.id) } },
-                                uniquingKeysWith: { first, _ in first })
-        attempted.formUnion(wanted.map(\.id))
-        isCapturing = true
-        Task {
-            let images = await IconCapture.images(of: Array(owners.keys))
-            self.isCapturing = false
-            let ids = Set(self.kept.map(\.id))
-            self.attempted.formIntersection(ids)
-            var captured = self.captured.filter { ids.contains($0.key) }
-            let pids = Set(self.kept.map(\.item.pid))
-            self.grayIcons = self.grayIcons.filter { pids.contains($0.key) }
-            for (window, image) in images { if let id = owners[window] { captured[id] = image } }
-            // An item that came out empty is tried again, a couple of times, as
-            // it may have been caught moving.
-            for id in owners.filter({ images[$0.key] == nil }).map(\.value) {
-                self.misses[id, default: 0] += 1
-                if self.misses[id]! <= Self.captureRetries { self.attempted.remove(id) }
-            }
-            self.captured = captured
-            self.updateStack()
+            looks.image(for: entry).map { StackEntry(id: entry.item.id, image: $0, toolTip: entry.item.displayName) }
         }
     }
 
@@ -335,17 +359,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         item.isEnabled = false
         return item
-    }
-
-    /// The app's icon in grays, to sit among monochrome menu bar icons.
-    private func icon(for pid: pid_t, size: CGFloat) -> NSImage? {
-        guard let icon = NSRunningApplication(processIdentifier: pid)?.icon,
-              let tiff = icon.tiffRepresentation, let input = CIImage(data: tiff),
-              let filter = CIFilter(name: "CIPhotoEffectMono") else { return nil }
-        filter.setValue(input, forKey: kCIInputImageKey)
-        guard let output = filter.outputImage,
-              let cgImage = CIContext().createCGImage(output, from: output.extent) else { return nil }
-        return NSImage(cgImage: cgImage, size: NSSize(width: size, height: size))
     }
 
     // MARK: - Actions
@@ -444,5 +457,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if alert.runModal() == .alertFirstButtonReturn {
             _ = Self.accessibilitySettingsURLs.first { NSWorkspace.shared.open($0) }
         }
+    }
+}
+
+/// A menu bar row window as the watch compares it: where it is and whether
+/// it's drawn, not what it's named (names follow the active menu bar).
+private struct WindowState: Equatable {
+    let id: UInt32
+    let frame: CGRect
+    let isOnscreen: Bool
+
+    /// The windows of every menu bar row, leaving out other windows at the
+    /// status level (floating panels and the like).
+    static func of(_ layout: MenuBarLayout) -> [WindowState] {
+        layout.allRows
+            .map { WindowState(id: $0.id, frame: $0.frame, isOnscreen: $0.isOnscreen) }
+            .sorted { $0.id < $1.id }
     }
 }

@@ -100,12 +100,7 @@ public enum Geometry {
             return onScreen ? .hiddenByNotch : .offscreen
         }
 
-        // App menus start at the left edge of the screen they're on, and every
-        // menu bar shows the same menus, so their width carries across screens.
-        let menuWidth = appMenus.flatMap { menus in
-            screens.first { $0.frame.contains(CGPoint(x: menus.minX, y: menus.midY)) }
-                .map { menus.maxX - $0.frame.minX }
-        }
+        let menuWidth = menuWidth(appMenus: appMenus, screens: screens)
 
         // On a notched display, status items are laid out right-to-left. Once
         // they run out of room they continue under the notch, and then to its
@@ -131,6 +126,17 @@ public enum Geometry {
         return visibleArea / area < minimumVisibleFraction ? .offscreen : .visible
     }
 
+    /// How far the frontmost app's menus reach from the left edge of a menu
+    /// bar. They start at the left edge of the screen they were read on, and
+    /// every menu bar shows the same menus, so the width carries across
+    /// screens. Nil when the menus are unknown or off every screen.
+    static func menuWidth(appMenus: CGRect?, screens: [ScreenInfo]) -> CGFloat? {
+        appMenus.flatMap { menus in
+            screens.first { $0.frame.contains(CGPoint(x: menus.minX, y: menus.midY)) }
+                .map { menus.maxX - $0.frame.minX }
+        }
+    }
+
     /// Where a stack of hidden items `width` wide fits in a screen's menu bar
     /// without covering anything: the right edge of the slot (Quartz), or nil
     /// when there's no room.
@@ -144,11 +150,7 @@ public enum Geometry {
                                  leftmostShown: CGRect?, margin: CGFloat = 4) -> CGFloat? {
         guard screens.indices.contains(index), let leftmost = leftmostShown else { return nil }
         let screen = screens[index]
-        // Every menu bar shows the same menus from its left edge.
-        let menusEnd = appMenus.flatMap { menus in
-            screens.first { $0.frame.contains(CGPoint(x: menus.minX, y: menus.midY)) }
-                .map { screen.frame.minX + menus.maxX - $0.frame.minX }
-        }
+        let menusEnd = menuWidth(appMenus: appMenus, screens: screens).map { screen.frame.minX + $0 }
         let rightEdge = leftmost.minX - 2
         let rightStart = max(screen.notch?.maxX ?? -.greatestFiniteMagnitude,
                              menusEnd ?? -.greatestFiniteMagnitude) + margin
