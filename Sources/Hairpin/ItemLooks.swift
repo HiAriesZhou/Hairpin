@@ -2,7 +2,9 @@ import AppKit
 import HairpinCore
 
 /// What each menu bar item looks like in the row: the shape captured while
-/// it was shown (a hidden item isn't drawn), else its app's icon in grays.
+/// it was shown (a hidden item isn't drawn), else a monochrome placeholder:
+/// its app's initial in a rounded square. (An app icon turned gray goes
+/// muddy, and macOS 26 offers no other app's status item image.)
 ///
 /// Looks are keyed by the item's status window rather than its id, which is
 /// its place among its app's items and shifts when the app adds or drops
@@ -21,12 +23,12 @@ final class ItemLooks {
     private static let captureDelay: TimeInterval = 1.5
     /// How often a look that comes out empty is tried again.
     private static let retries = 2
-    private static let grayIconSide: CGFloat = 18
+    private static let placeholderSide: CGFloat = 18
 
     private var captured: [Fingerprint: NSImage] = [:]
     private var attempted: Set<Fingerprint> = []
     private var misses: [Fingerprint: Int] = [:]
-    private var grayIcons: [pid_t: NSImage] = [:]
+    private var placeholders: [pid_t: NSImage] = [:]
     private var isCapturing = false
     private var captureTimer: Timer?
     /// The latest items, which a pending capture takes when it fires.
@@ -38,18 +40,20 @@ final class ItemLooks {
 
     func image(for entry: ClassifiedItem) -> NSImage? {
         if let image = captured[Self.fingerprint(of: entry)] { return image }
-        if grayIcons[entry.item.pid] == nil { grayIcons[entry.item.pid] = Self.grayIcon(for: entry.item.pid) }
-        return grayIcons[entry.item.pid]
+        if placeholders[entry.item.pid] == nil {
+            placeholders[entry.item.pid] = Self.placeholder(for: entry.item.appName)
+        }
+        return placeholders[entry.item.pid]
     }
 
-    /// Forgets the looks of items whose windows are gone, and the gray icons
+    /// Forgets the looks of items whose windows are gone, and the placeholders
     /// of apps that quit.
     func forget(exceptWindows windows: Set<UInt32>, pids running: Set<pid_t>) {
         let live: (Fingerprint) -> Bool = { fingerprint in fingerprint.window.map(windows.contains) ?? false }
         captured = captured.filter { live($0.key) }
         attempted = attempted.filter(live)
         misses = misses.filter { live($0.key) }
-        grayIcons = grayIcons.filter { running.contains($0.key) }
+        placeholders = placeholders.filter { running.contains($0.key) }
     }
 
     /// Captures the looks of shown items not tried yet, once, after the menu
@@ -98,14 +102,26 @@ final class ItemLooks {
         }
     }
 
-    /// The app's icon in grays, to sit among monochrome menu bar icons.
-    private static func grayIcon(for pid: pid_t) -> NSImage? {
-        guard let icon = NSRunningApplication(processIdentifier: pid)?.icon,
-              let tiff = icon.tiffRepresentation, let input = CIImage(data: tiff),
-              let filter = CIFilter(name: "CIPhotoEffectMono") else { return nil }
-        filter.setValue(input, forKey: kCIInputImageKey)
-        guard let output = filter.outputImage,
-              let cgImage = CIContext().createCGImage(output, from: output.extent) else { return nil }
-        return NSImage(cgImage: cgImage, size: NSSize(width: grayIconSide, height: grayIconSide))
+    /// The app's initial in a rounded square, as a template image so it takes
+    /// the same colors as the captured shapes beside it.
+    private static func placeholder(for appName: String) -> NSImage {
+        let initial = appName.trimmingCharacters(in: .whitespacesAndNewlines).first.map { String($0).uppercased() } ?? "?"
+        let image = NSImage(size: NSSize(width: placeholderSide, height: placeholderSide), flipped: false) { rect in
+            let line: CGFloat = 1.4
+            let frame = NSBezierPath(roundedRect: rect.insetBy(dx: 1.5, dy: 1.5), xRadius: 4.5, yRadius: 4.5)
+            frame.lineWidth = line
+            NSColor.black.setStroke()
+            frame.stroke()
+            let text = NSAttributedString(string: initial, attributes: [
+                .font: NSFont.systemFont(ofSize: 10, weight: .bold),
+                .foregroundColor: NSColor.black,
+            ])
+            let size = text.size()
+            text.draw(at: NSPoint(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2))
+            return true
+        }
+        image.isTemplate = true
+        image.accessibilityDescription = appName
+        return image
     }
 }

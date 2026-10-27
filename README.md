@@ -35,7 +35,7 @@ Hairpin 只在这种时候出现：菜单栏里有图标被挤掉时，可见图
 ### 权限
 
 - **辅助功能（必需）**：Hairpin 用辅助功能 API 读取其他应用的菜单栏图标，并替你「点击」它们。第一次运行会弹窗说明，点「Open System Settings」后，在「系统设置 › 隐私与安全性 › 辅助功能」里打开 Hairpin。如果列表里没有它，点「+」手动添加 `Hairpin.app`。授权之前，菜单里只有「Grant Accessibility…」、「Open on Hover」、「Launch at Login」和「Quit Hairpin」。
-- **屏幕录制（可选，macOS 14 及以上）**：用来显示图标在菜单栏上的真实样子，并准确识别每个窗口属于哪个应用。第一次有图标被挤掉并展开时，系统会请求授权；也可以从菜单里的「Show Real Icons…」授权。不授权也能用：图标会显示为灰度的应用图标，识别改用位置推算。Hairpin 只截取菜单栏这一条，只在出现新的可见图标时截一次，截图只保存在内存里；截图时 macOS 可能短暂显示录屏指示。
+- **屏幕录制（可选，macOS 14 及以上）**：用来显示图标在菜单栏上的真实样子，并准确识别每个窗口属于哪个应用。第一次有图标被挤掉并展开时，系统会请求授权；也可以从菜单里的「Show Real Icons…」授权。不授权也能用：图标会显示为圆角方框里的应用首字母，识别改用位置推算。Hairpin 只截取菜单栏这一条，只在出现新的可见图标时截一次，截图只保存在内存里；截图时 macOS 可能短暂显示录屏指示。
 - **从旧版 NotchBar 升级**：Bundle ID 已从 `com.hiarieszhou.notchbar` 改为 `com.hiarieszhou.hairpin`，macOS 把它当作一个新应用，旧版的辅助功能授权和登录项都不会沿用。请在「辅助功能」里重新为 Hairpin.app 打开授权，需要的话重新勾选「Launch at Login」；旧的 NotchBar 条目可以用「−」删掉。
 
 Hairpin 不联网，不记录按键，也不读取应用窗口的内容。授予屏幕录制后，它只截取菜单栏这一条来抠出图标形状，并读取菜单栏图标窗口的名称来识别所属应用；图标形状只保存在内存里。
@@ -69,7 +69,7 @@ Hairpin 不联网，不记录按键，也不读取应用窗口的内容。授予
 - **不会真正移动图标。** Hairpin 不改变图标在菜单栏上的位置，只是替你点击它。
 - **菜单可能出现在刘海附近。** 菜单是应用自己弹出的，位置跟着真实图标走，而被挤掉的图标就在刘海附近。有些应用的菜单会贴着刘海弹出，部分内容可能被挡住或被挤到一边。
 - 有些应用的图标不响应 `AXPress` / `AXShowMenu`，或者点了之后打开的是自定义窗口而不是菜单，这取决于应用自己的实现。
-- 图标的样子是缓存的：会变化的内容（比如未读数、电量）显示的是最后一次可见时的状态。从 Hairpin 启动起就一直被挤掉的图标，没机会截图，显示为灰度的应用图标。截到的图标是单色的，彩色的菜单栏图标会变成单色。
+- 图标的样子是缓存的：会变化的内容（比如未读数、电量）显示的是最后一次可见时的状态。从 Hairpin 启动起就一直被挤掉的图标，没机会截图，显示为圆角方框里的应用首字母（悬停可看到应用名），等它下次显示出来再换成真实样子。截到的图标是单色的，彩色的菜单栏图标会变成单色。
 - 未响应的应用会被跳过：每个辅助功能请求的超时是 0.25 秒，而且读取在后台进行，所以卡住的应用只会让它自己的图标不出现，不会卡住 Hairpin。
 - 接了多块显示器时，只关心带刘海的那块（没有刘海时是主屏）；没有被激活过的菜单栏，系统可能不会立刻重新排列。
 - 应用采用 ad-hoc 签名，**每次更新到新版本后，可能需要在「辅助功能」和「屏幕录制」里重新授权**（先删掉旧条目再添加）。
@@ -112,7 +112,7 @@ Hairpin only shows up when that happens. While icons are hidden, a little hairpi
 ### Permissions
 
 - **Accessibility (required).** Hairpin reads other apps' menu bar icons and "clicks" them through the Accessibility API. On first launch an alert explains this; click "Open System Settings" and turn on Hairpin under System Settings › Privacy & Security › Accessibility. If it isn't listed, click "+" and add `Hairpin.app`. Until you grant it, the menu shows only "Grant Accessibility…", "Open on Hover", "Launch at Login" and "Quit Hairpin".
-- **Screen Recording (optional, macOS 14 or later).** It lets Hairpin show icons as they look in the menu bar and tell exactly which app each one belongs to. macOS asks for it the first time hidden icons are opened, or grant it from "Show Real Icons…" in the menu. Without it Hairpin still works: icons show as gray app icons, and it works out which icon is which from positions. Hairpin captures only the menu bar strip, once when new icons show up, and keeps the captures in memory; macOS may briefly show its recording indicator while it does.
+- **Screen Recording (optional, macOS 14 or later).** It lets Hairpin show icons as they look in the menu bar and tell exactly which app each one belongs to. macOS asks for it the first time hidden icons are opened, or grant it from "Show Real Icons…" in the menu. Without it Hairpin still works: icons show as the app's initial in a rounded square, and it works out which icon is which from positions. Hairpin captures only the menu bar strip, once when new icons show up, and keeps the captures in memory; macOS may briefly show its recording indicator while it does.
 - **Upgrading from NotchBar.** The bundle ID changed from `com.hiarieszhou.notchbar` to `com.hiarieszhou.hairpin`, so macOS treats Hairpin as a new app and the old Accessibility and Login Items grants don't carry over. Turn Accessibility on again for Hairpin.app, and re-enable "Launch at Login" if you used it. You can remove the old NotchBar entry with "−".
 
 Hairpin makes no network connections, doesn't log keystrokes and doesn't read app windows' contents. With Screen Recording it captures only the menu bar strip, to cut out icon shapes, and reads menu bar item windows' names to tell which app each belongs to; the shapes are kept in memory only.
@@ -146,7 +146,7 @@ The classification, ordering and placement logic lives in a separate `HairpinCor
 - **It doesn't physically move icons.** Hairpin leaves each icon where it is in the menu bar and just clicks it for you.
 - **Menus can open near the notch.** The app opens its own menu at the real icon's position, and hidden icons sit by the notch. Some apps' menus open against the notch and may be partly hidden or pushed aside.
 - Some icons don't respond to `AXPress` / `AXShowMenu`, or open a custom window instead of a menu. That depends on how each app is built.
-- Icon looks are cached: anything that changes (unread counts, battery level) shows as it last looked. An icon that's been hidden since Hairpin started was never captured and shows as a gray app icon. Captures are monochrome, so a colored menu bar icon turns monochrome.
+- Icon looks are cached: anything that changes (unread counts, battery level) shows as it last looked. An icon that's been hidden since Hairpin started was never captured and shows as its app's initial in a rounded square (hover for the name) until it next shows. Captures are monochrome, so a colored menu bar icon turns monochrome.
 - Unresponsive apps are skipped. Every Accessibility request has a 0.25 s timeout and the scan runs in the background, so a hung app only leaves its own icons out; it can't freeze Hairpin.
 - With several displays, only the notched one counts (the primary one if none is notched). macOS may not relay out a menu bar that hasn't been active.
 - Because the app is ad-hoc signed, **you may need to grant Accessibility and Screen Recording again after each update** (remove the old entry, then add the new app).
