@@ -11,6 +11,8 @@ Releases are signed with a Developer ID, notarized by Apple and published by CI.
    ```
 3. CI's `build` job builds and tests as usual, then the `release` job signs the app with the hardened runtime, notarizes and staples it, builds and notarizes the disk image, and publishes `Hairpin.zip` and `Hairpin.dmg` on a GitHub Release with generated notes. Edit the notes afterwards if you like.
 
+The website's download button and the README link to `releases/latest/download/Hairpin.dmg`, so every release must be a full (not pre-) release with an asset named exactly `Hairpin.dmg`. GitHub's "latest" skips pre-releases, and a renamed asset breaks the link.
+
 ## Secrets
 
 They're repository secrets (Settings › Secrets and variables › Actions), the same five as Howler's; GitHub doesn't share secrets between a personal account's repositories, so each repository holds its own copy. Only the `release` job reads them; the `build` job and pull requests from forks never get them.
