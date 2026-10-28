@@ -9,12 +9,11 @@ Releases are signed with a Developer ID, notarized by Apple and published by CI.
    ```sh
    git tag -a v0.3.0 -m "Hairpin 0.3.0" && git push origin v0.3.0
    ```
-3. CI's `build` job builds and tests as usual. The `release` job then waits on the **release** environment: approve it under the run's **Review deployments**.
-4. The job signs the app with the hardened runtime, notarizes and staples it, builds and notarizes the disk image, and publishes `Hairpin.zip` and `Hairpin.dmg` on a GitHub Release with generated notes. Edit the notes afterwards if you like.
+3. CI's `build` job builds and tests as usual, then the `release` job signs the app with the hardened runtime, notarizes and staples it, builds and notarizes the disk image, and publishes `Hairpin.zip` and `Hairpin.dmg` on a GitHub Release with generated notes. Edit the notes afterwards if you like.
 
 ## Secrets
 
-The **release** environment (Settings › Environments) holds them; no other job can read them, and pull requests from forks never run with them.
+They're repository secrets (Settings › Secrets and variables › Actions), the same five as Howler's; GitHub doesn't share secrets between a personal account's repositories, so each repository holds its own copy. Only the `release` job reads them; the `build` job and pull requests from forks never get them.
 
 | Secret | What it is |
 |---|---|
