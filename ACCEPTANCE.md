@@ -12,7 +12,7 @@ Tick each box; record the macOS version, Mac model and Hairpin version at the bo
 ## Install and first launch
 
 - [ ] Download `Hairpin.dmg` from the release, open it: it shows `Hairpin.app` beside an Applications link; dragging the app onto the link installs it. (Or download `Hairpin.zip`, unzip, move `Hairpin.app` to /Applications.)
-- [ ] Double-clicking is blocked by Gatekeeper; **right-click → Open → Open** launches it. (Alternatively `xattr -dr com.apple.quarantine /Applications/Hairpin.app`, then double-click.)
+- [ ] Double-clicking opens it with no Gatekeeper warning; `spctl --assess --type execute --verbose=2 /Applications/Hairpin.app` says `accepted` and `source=Notarized Developer ID`.
 - [ ] No Dock icon and no app menu appear (agent app); one Hairpin icon (a bow on a bobby pin) appears in the menu bar.
 - [ ] On a first launch (fresh user defaults: `defaults delete com.hiarieszhou.hairpin`), the Hairpin icon joins the third-party icons at their left end, never right of Apple's (Control Center, clock, Wi‑Fi, battery).
 - [ ] Finder › Get Info shows version 0.2.0 (or the tag you're testing).
