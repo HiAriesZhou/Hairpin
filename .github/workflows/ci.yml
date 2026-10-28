@@ -7,14 +7,17 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Read-only by default; only the release job may write, and only it sees the
+# signing secrets. Third-party code runs at pinned commits.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
+  # Every push and pull request: build, test and package, ad hoc signed.
   build:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
@@ -32,17 +35,13 @@ jobs:
         run: swift test
 
       - name: Bundle
-        run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            export VERSION="${GITHUB_REF_NAME#v}"
-          fi
-          scripts/bundle.sh
+        run: scripts/bundle.sh
 
       - name: Disk image
         run: scripts/dmg.sh
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: Hairpin
           path: |
@@ -50,8 +49,80 @@ jobs:
             Hairpin.dmg
           if-no-files-found: error
 
+  # Version tags: sign with the Developer ID, notarize and publish. The
+  # `release` environment holds the secrets and waits for the maintainer's
+  # approval before the job starts.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: macos-latest
+    environment: release
+    permissions:
+      contents: write # create the GitHub Release
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      # Secrets are decoded into files in the runner's temporary directory and
+      # never printed; the keychain and files are removed at the end.
+      - name: Import signing certificate
+        env:
+          CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          if [[ -z "$CERT_P12_BASE64" || -z "$CERT_PASSWORD" ]]; then
+            echo "error: the release environment has no signing certificate" >&2
+            exit 1
+          fi
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          echo "$CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/cert.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          IDENTITY="$(security find-identity -v -p codesigning "$KEYCHAIN" | awk '/Developer ID Application/ { print $2; exit }')"
+          if [[ -z "$IDENTITY" ]]; then
+            echo "error: the certificate holds no Developer ID Application identity" >&2
+            exit 1
+          fi
+          echo "SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+          echo "KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
+
+      - name: Notarization credentials
+        env:
+          NOTARY_KEY_P8_BASE64: ${{ secrets.NOTARY_KEY_P8_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          if [[ -z "$NOTARY_KEY_P8_BASE64" || -z "$NOTARY_KEY_ID" || -z "$NOTARY_ISSUER_ID" ]]; then
+            echo "error: the release environment has no notarization key; Gatekeeper would block the build" >&2
+            exit 1
+          fi
+          echo "$NOTARY_KEY_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/notary.p8"
+          {
+            echo "NOTARY_KEY_PATH=$RUNNER_TEMP/notary.p8"
+            echo "NOTARY_KEY_ID=$NOTARY_KEY_ID"
+            echo "NOTARY_ISSUER_ID=$NOTARY_ISSUER_ID"
+          } >> "$GITHUB_ENV"
+
+      - name: Bundle (signed)
+        run: VERSION="${GITHUB_REF_NAME#v}" scripts/bundle.sh
+
+      - name: Notarize app
+        run: scripts/notarize.sh app
+
+      - name: Disk image (signed)
+        run: scripts/dmg.sh
+
+      - name: Notarize disk image
+        run: scripts/notarize.sh dmg
+
       - name: Publish release
-        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
@@ -62,3 +133,9 @@ jobs:
             gh release create "$TAG" Hairpin.zip Hairpin.dmg --verify-tag \
               --title "Hairpin $TAG" --generate-notes
           fi
+
+      - name: Remove signing material
+        if: always()
+        run: |
+          [[ -n "${KEYCHAIN:-}" ]] && security delete-keychain "$KEYCHAIN" || true
+          rm -f "$RUNNER_TEMP/notary.p8" "$RUNNER_TEMP/cert.p12"
