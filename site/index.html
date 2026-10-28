@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hairpin</title>
+<meta name="description" content="A tiny macOS menu bar app that keeps the icons hidden behind the MacBook notch within reach.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="Hairpin">
+<meta property="og:description" content="A tiny macOS menu bar app that keeps the icons hidden behind the MacBook notch within reach.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://hairpin.arieszhou.com/">
+<meta property="og:image" content="https://hairpin.arieszhou.com/icon.png">
+<link rel="canonical" href="https://hairpin.arieszhou.com/">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="preload" href="fonts/BodoniModa-Italic.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* Bodoni Moda (SIL OFL 1.1, fonts/OFL.txt), Latin subset, served from this site so visitors make no third-party requests. */
+@font-face { font-family: "Bodoni Moda"; font-style: normal; font-weight: 400 700; font-display: swap; src: url("fonts/BodoniModa.woff2") format("woff2"); }
+@font-face { font-family: "Bodoni Moda"; font-style: italic; font-weight: 400 700; font-display: swap; src: url("fonts/BodoniModa-Italic.woff2") format("woff2"); }
+/* Layout: one left-aligned column; the live menu bar runs full width as the hero; privacy reads as a care tag hung beside its text. */
+:root {
+  --paper: #FFF6EE;        /* icon cream, top */
+  --blush: #FFE1E6;        /* icon cream, bottom */
+  --ink: #3B3852;          /* icon steel */
+  --ink-soft: #6E6987;
+  --rule: #EBD3D6;
+  --satin: #F4567E;        /* bow */
+  --satin-ink: #C2345C;    /* bow fold, text-safe */
+  --tag: #FFFDFB;
+  --btn-fg: #FFFFFF;
+
+  /* The macOS picture keeps its own light look in both themes. */
+  --mac-bezel: #0E0D12;
+  --mac-bar: rgba(255, 250, 248, 0.62);
+  --mac-text: #1F1D27;
+  --mac-glass: rgba(255, 252, 250, 0.55);
+  --mac-glass-edge: rgba(255, 255, 255, 0.7);
+
+  --display: "Bodoni Moda", "Songti SC", "Noto Serif SC", "Didot", Georgia, serif;
+  --body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --step--1: 0.8125rem;
+  --step-0: 1rem;
+  --step-1: 1.1875rem;
+  --step-2: 1.625rem;
+  --step-3: clamp(2rem, 4.2vw, 2.75rem);
+  --step-4: clamp(2.75rem, 7.4vw, 5.25rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #1C1A26; --blush: #262233; --ink: #F5ECEF; --ink-soft: #A9A3BF;
+    --rule: #3A3548; --satin: #FF8FAB; --satin-ink: #FF8FAB; --tag: #2B2739; --btn-fg: #2A1520;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #1C1A26; --blush: #262233; --ink: #F5ECEF; --ink-soft: #A9A3BF;
+  --rule: #3A3548; --satin: #FF8FAB; --satin-ink: #FF8FAB; --tag: #2B2739; --btn-fg: #2A1520;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 var(--step-0)/1.6 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+.wrap {
+  max-width: 1120px;
+  margin-inline: auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+a { color: var(--satin-ink); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 2px solid var(--satin); outline-offset: 3px; border-radius: 4px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 500; text-wrap: balance; margin: 0; }
+p { margin: 0; }
+.eyebrow {
+  font: 500 0.75rem/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft);
+}
+
+/* Header */
+.top { display: flex; align-items: center; gap: 20px; padding-block: 20px; }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; margin-right: auto; }
+.brand img { width: 32px; height: 32px; }
+.brand span { font: italic 600 1.375rem/1 var(--display); }
+.top a.plain { color: var(--ink-soft); text-decoration: none; font-size: var(--step--1); }
+.top a.plain:hover { color: var(--ink); }
+.lang {
+  font: 500 var(--step--1)/1 var(--body); color: var(--ink); background: none;
+  border: 1px solid var(--rule); border-radius: 999px; padding: 7px 12px; cursor: pointer;
+  transition: transform 120ms ease-out, border-color 120ms;
+}
+.lang:hover { border-color: var(--ink-soft); }
+.lang:active { transform: scale(0.96); }
+
+/* Hero */
+.hero { padding-block: clamp(32px, 7vw, 72px) 28px; display: grid; gap: 22px; }
+.hero h1 {
+  font-size: var(--step-4); line-height: 0.98; font-style: italic; font-weight: 500; letter-spacing: -0.01em;
+  max-width: 13ch;
+}
+.hero h1 em { font-style: normal; color: var(--satin-ink); }
+.lede { font-size: var(--step-1); line-height: 1.55; max-width: 34em; color: var(--ink-soft); }
+.lede strong { color: var(--ink); font-weight: 600; }
+.cta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; margin-top: 6px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--ink); color: var(--paper); text-decoration: none;
+  font: 600 var(--step-0)/1 var(--body); padding: 15px 22px 15px 18px; border-radius: 999px;
+  transition: transform 120ms ease-out, background-color 160ms;
+}
+.btn:hover { background: var(--satin-ink); color: var(--btn-fg); text-decoration: none; }
+.btn:active { transform: scale(0.97); }
+.btn svg { width: 18px; height: 18px; }
+.meta { font: 400 var(--step--1)/1.5 var(--mono); color: var(--ink-soft); }
+
+/* Demo: a slice of a MacBook's top edge */
+.demo { padding-block: 8px 72px; }
+.stage { position: relative; width: 100%; overflow: hidden; }
+.screen {
+  position: absolute; left: 0; top: 0; width: 1200px; height: 300px; transform-origin: 0 0;
+  background: var(--mac-bezel); border-radius: 22px 22px 0 0; padding: 12px 12px 0;
+}
+.display {
+  /* Concentric with the bezel (22 - 12); clip-path also clips the blurred menu bar, which overflow alone lets through. */
+  position: relative; height: 100%; border-radius: 10px 10px 0 0; overflow: hidden; color: var(--mac-text);
+  clip-path: inset(0 round 10px 10px 0 0);
+  background:
+    radial-gradient(60% 90% at 18% 110%, #FF8FAB 0%, transparent 60%),
+    radial-gradient(50% 80% at 85% 100%, #B9B2D6 0%, transparent 65%),
+    radial-gradient(45% 70% at 55% 20%, #FFE1E6 0%, transparent 70%),
+    linear-gradient(170deg, #FFF1EA 0%, #F7C9D3 55%, #CFC6E3 100%);
+}
+.menubar {
+  position: absolute; inset: 0 0 auto 0; height: 32px; display: flex; align-items: center;
+  padding: 0 14px; border-radius: 10px 10px 0 0; background: var(--mac-bar); backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  color: var(--mac-text); font: 400 13.5px/1 var(--body);
+}
+.menus { display: flex; align-items: center; gap: 19px; white-space: nowrap; }
+.menus b { font-weight: 700; }
+.menus svg { width: 14px; height: 17px; }
+.notch {
+  position: absolute; top: 0; left: 493px; width: 190px; height: 32px; background: var(--mac-bezel);
+  border-radius: 0 0 12px 12px;
+}
+.notch::before, .notch::after {
+  content: ""; position: absolute; top: 0; width: 8px; height: 8px;
+  background: radial-gradient(circle at 0 100%, transparent 7.5px, var(--mac-bezel) 8px);
+}
+.notch::before { left: -8px; }
+.notch::after { right: -8px; transform: scaleX(-1); }
+.extras {
+  position: absolute; top: 0; right: 14px; height: 32px; display: flex; align-items: center; gap: 2px;
+}
+.extra, .pin, .sys {
+  height: 24px; min-width: 30px; display: grid; place-items: center; color: var(--mac-text);
+  border-radius: 6px; border: 0; background: none; padding: 0 5px; font: inherit;
+}
+.extra svg, .sys svg { width: 17px; height: 17px; }
+.clock { padding: 0 6px 0 8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pin { cursor: pointer; width: 34px; transition: transform 120ms ease-out, background-color 120ms; }
+.pin svg { width: 20px; height: 20px; }
+.pin:hover, .pin[aria-expanded="true"] { background: rgba(31, 29, 39, 0.1); }
+.pin:active { transform: scale(0.9); }
+.pin.arrive { animation: arrive 260ms cubic-bezier(.2,.9,.3,1.3); }
+@keyframes arrive { from { transform: scale(0.4); opacity: 0; } }
+
+.row {
+  position: absolute; top: 38px; display: flex; gap: 2px; padding: 5px; border-radius: 22px;
+  background: var(--mac-glass); border: 1px solid var(--mac-glass-edge);
+  backdrop-filter: blur(18px) saturate(1.6); -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  box-shadow: 0 10px 30px rgba(59, 56, 82, 0.22), 0 1px 0 rgba(255,255,255,.6) inset;
+  transform-origin: top center;
+  transition: opacity 160ms ease-out, transform 180ms cubic-bezier(.2,.8,.3,1);
+}
+.row[hidden] { display: flex !important; opacity: 0; transform: translateY(-6px) scale(0.96); pointer-events: none; visibility: hidden; }
+.cell {
+  width: 34px; height: 34px; border-radius: 17px; display: grid; place-items: center; border: 0;
+  background: none; color: var(--mac-text); cursor: pointer; padding: 0;
+  transition: transform 120ms ease-out, background-color 120ms;
+}
+.cell svg { width: 20px; height: 20px; }
+.cell:hover { background: rgba(31, 29, 39, 0.1); }
+.cell:active { transform: scale(0.88); }
+.pointer-hint {
+  position: absolute; font: 500 13px/1.3 var(--body); color: var(--mac-text);
+  background: rgba(255, 252, 250, 0.82); padding: 7px 11px; border-radius: 10px; white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(59, 56, 82, 0.16);
+}
+
+.controls {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; padding-top: 18px;
+  border-top: 1px solid var(--rule); font-size: var(--step--1); color: var(--ink-soft);
+}
+.stepper { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); }
+.stepper button {
+  width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--rule); background: var(--tag);
+  color: var(--ink); font: 500 16px/1 var(--body); cursor: pointer; transition: transform 120ms ease-out;
+}
+.stepper button:active { transform: scale(0.9); }
+.stepper button:disabled { opacity: 0.4; cursor: default; }
+.stepper output { font: 600 var(--step-0)/1 var(--mono); min-width: 2ch; text-align: center; }
+#status { min-height: 1.6em; }
+#status strong { color: var(--ink); font-weight: 600; }
+
+/* Sections */
+section.band { padding-block: 72px; border-top: 1px solid var(--rule); }
+.band-head { display: grid; gap: 10px; margin-bottom: 36px; }
+.band-head h2 { font-size: var(--step-3); line-height: 1.08; font-style: italic; }
+.traits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 36px 56px; margin: 0; }
+.traits div { display: grid; gap: 8px; min-width: 0; }
+.traits dt { font: italic 500 var(--step-2)/1.15 var(--display); }
+.traits dd { margin: 0; color: var(--ink-soft); max-width: 32em; }
+
+.privacy { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 56px; align-items: start; }
+.privacy .copy { display: grid; gap: 18px; }
+.privacy .copy p { max-width: 34em; color: var(--ink-soft); }
+.privacy .copy .first { color: var(--ink); font-size: var(--step-1); }
+.tag {
+  position: relative; justify-self: center; width: min(100%, 340px); background: var(--tag);
+  border-radius: 6px 6px 18px 18px; padding: 44px 26px 26px; transform: rotate(-2.2deg);
+  box-shadow: 0 1px 0 var(--rule), 0 18px 40px -18px rgba(59, 56, 82, 0.35);
+}
+.tag::before {
+  content: ""; position: absolute; inset: 8px; border: 1px dashed var(--rule); border-radius: 3px 3px 13px 13px;
+  pointer-events: none;
+}
+.tag .hole {
+  position: absolute; top: 16px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%;
+  background: var(--paper); box-shadow: inset 0 1px 2px rgba(0,0,0,.18);
+}
+.tag h3 { font: 600 0.75rem/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; text-align: center; margin-bottom: 18px; }
+.tag dl { margin: 0; display: grid; }
+.tag dl div { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 11px 0; border-top: 1px solid var(--rule); }
+.tag dt { font: 500 var(--step--1)/1.3 var(--body); }
+.tag dd { margin: 0; font: 600 0.75rem/1.3 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--satin-ink); text-align: right; }
+.tag dd.note { grid-column: 1 / -1; font: 400 0.75rem/1.45 var(--body); letter-spacing: 0; text-transform: none; text-align: left; color: var(--ink-soft); }
+
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; counter-reset: step; }
+.steps li { display: grid; gap: 10px; align-content: start; min-width: 0; counter-increment: step; }
+.steps li::before { content: counter(step); font: italic 500 3.25rem/1 var(--display); color: var(--satin); }
+.steps strong { font-weight: 600; }
+.steps p { color: var(--ink-soft); }
+.reqs { margin-top: 40px; font: 400 var(--step--1)/1.7 var(--mono); color: var(--ink-soft); }
+
+.limits { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; max-width: 46em; }
+.limits li { padding-left: 22px; position: relative; color: var(--ink-soft); }
+.limits li::before { content: ""; position: absolute; left: 2px; top: 0.72em; width: 8px; height: 1px; background: var(--ink-soft); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 36px 48px; font-size: var(--step--1); color: var(--ink-soft); }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: baseline; }
+footer .sign { font: italic 500 var(--step-1)/1 var(--display); color: var(--ink); margin-right: auto; }
+
+@media (max-width: 760px) {
+  .top a.plain { display: none; }
+  .traits, .privacy, .steps { grid-template-columns: minmax(0, 1fr); }
+  .privacy { gap: 40px; }
+  section.band { padding-block: 56px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- Hairpin's template mark, ported from HairpinIcon.swift (18pt grid, y up, tilted 12°). -->
+    <symbol id="i-hairpin" viewBox="0 0 18 18">
+      <g transform="translate(9 9) scale(1 -1) rotate(12)" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7.3 -5.2 L-6 -5.2 A1.3 1.3 0 0 0 -6 -2.6 L2.7 -2.6 C3.175 -3.432 4.125 -3.9 4.6 -2.6 C5.075 -3.432 6.025 -3.9 6.5 -2.6 L7.3 -2.6"/>
+        <g transform="translate(0 1.5)">
+          <path d="M2 0.55 C2.4 3.78 4.05 4.68 5.4 3.6 C6.48 1.98 6.21 -0.9 4.968 -1.5 C3.78 -1.95 2.6 -1.65 2 -0.55 Z"/>
+          <path d="M-2 0.55 C-2.4 3.78 -4.05 4.68 -5.4 3.6 C-6.48 1.98 -6.21 -0.9 -4.968 -1.5 C-3.78 -1.95 -2.6 -1.65 -2 -0.55 Z"/>
+          <circle r="1.7" fill="currentColor" stroke="none"/>
+        </g>
+      </g>
+    </symbol>
+    <symbol id="i-apple" viewBox="0 0 14 17"><path fill="currentColor" d="M11.6 9c0-2 1.6-2.9 1.7-3-1-1.4-2.4-1.6-2.9-1.6-1.2-.1-2.4.7-3 .7-.6 0-1.6-.7-2.6-.7C3.400 4.4 2.1 5.200 1.4 6.400 0 8.900 1.000 12.600 2.400 14.500c.6.900 1.400 2 2.400 1.900 1-.1 1.300-.6 2.500-.6s1.500.6 2.500.6c1 0 1.700-.9 2.300-1.900.7-1.100 1-2.100 1-2.200 0 0-2.400-.9-2.500-3.300zM9.700 3.100c.5-.7.900-1.600.8-2.500-.8 0-1.800.5-2.300 1.200-.5.600-.9 1.500-.8 2.400.9.100 1.800-.4 2.300-1.100z"/></symbol>
+    <symbol id="i-battery" viewBox="0 0 26 14"><rect x="1" y="2" width="21" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".55"/><rect x="3" y="4" width="14" height="6" rx="1.5" fill="currentColor"/><path d="M23.5 5.5v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".55"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 18 18"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2 7.5a10 10 0 0 1 14 0"/><path d="M4.6 10.2a6.3 6.3 0 0 1 8.8 0"/></g><circle cx="9" cy="13.4" r="1.6" fill="currentColor"/></symbol>
+    <symbol id="i-cc" viewBox="0 0 18 18"><g fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="3.5" width="14" height="4.4" rx="2.2"/><rect x="2" y="10.1" width="14" height="4.4" rx="2.2"/></g><circle cx="13.8" cy="5.7" r="1.4" fill="currentColor"/><circle cx="4.2" cy="12.3" r="1.4" fill="currentColor"/></symbol>
+  </defs>
+</svg>
+
+<header class="wrap top">
+  <a class="brand" href="#">
+    <img src="icon.png" alt="" width="32" height="32">
+    <span>Hairpin</span>
+  </a>
+  <a class="plain" href="https://github.com/HiAriesZhou/Hairpin/blob/main/docs/how-it-works.md" data-i18n="navHow">How it works</a>
+  <a class="plain" href="https://github.com/HiAriesZhou/Hairpin">GitHub</a>
+  <button class="lang" id="lang" type="button" lang="zh-CN">中文</button>
+</header>
+
+<main>
+  <section class="wrap hero">
+    <p class="eyebrow" data-i18n="eyebrow">A menu bar app for MacBooks with a notch</p>
+    <h1 data-i18n="headline">Pin back what the <em>notch</em> hides.</h1>
+    <p class="lede" data-i18n="lede">When there are more menu bar icons than fit beside the notch, macOS quietly hides the rest. <strong>Hairpin notices, and keeps them in a small hairpin</strong> at the left end of your icons. Hover or click it, and they drop down in a row.</p>
+    <div class="cta">
+      <a class="btn" id="download" href="https://github.com/HiAriesZhou/Hairpin/releases/latest/download/Hairpin.dmg">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2.5v9M5 8l4 4 4-4M3 15.5h12"/></svg>
+        <span data-i18n="download">Download for Mac</span>
+      </a>
+      <span class="meta" data-i18n="meta">Free · MIT · macOS 13+ · Apple silicon</span>
+    </div>
+  </section>
+
+  <section class="wrap demo" aria-label="Interactive demo" data-i18n-aria="aDemo">
+    <div class="stage" id="stage">
+      <div class="screen" id="screen" aria-hidden="false">
+        <div class="display">
+          <div class="menubar">
+            <div class="menus" aria-hidden="true">
+              <svg><use href="#i-apple"/></svg>
+              <b>Preview</b><span>File</span><span>Edit</span><span>View</span><span>Go</span><span>Tools</span><span>Window</span><span>Help</span>
+            </div>
+          </div>
+          <div class="notch" aria-hidden="true"></div>
+          <div class="extras" id="extras"></div>
+          <div class="row" id="row" role="group" aria-label="Hidden icons" data-i18n-aria="aRow" hidden></div>
+          <div class="pointer-hint" id="hint" hidden></div>
+        </div>
+      </div>
+    </div>
+    <div class="controls">
+      <span class="stepper">
+        <span data-i18n="count">Menu bar icons</span>
+        <button type="button" id="less" aria-label="Fewer icons" data-i18n-aria="aLess">−</button>
+        <output id="n">12</output>
+        <button type="button" id="more" aria-label="More icons" data-i18n-aria="aMore">+</button>
+      </span>
+      <span id="status" aria-live="polite"></span>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap">
+      <div class="band-head">
+        <p class="eyebrow" data-i18n="behaveEyebrow">How it behaves</p>
+        <h2 data-i18n="behaveTitle">Small, and out of the way until you need it.</h2>
+      </div>
+      <dl class="traits">
+        <div><dt data-i18n="t1">Hover or click</dt><dd data-i18n="t1d">Rest the pointer on the hairpin for half a second and the row opens; move away and it closes. Click it and the row stays until you click elsewhere, click the hairpin again or press Escape.</dd></div>
+        <div><dt data-i18n="t2">Only there when needed</dt><dd data-i18n="t2d">With nothing hidden, there is no hairpin. It appears the moment macOS runs out of room.</dd></div>
+        <div><dt data-i18n="t3">Keeps up</dt><dd data-i18n="t3d">It follows along as you switch apps, long app menus included, as icons come and go, and as the menu bar hides itself or goes full screen.</dd></div>
+        <div><dt data-i18n="t4">Looks right</dt><dd data-i18n="t4d">Icons keep their menu bar order. With Screen Recording they look just as they do in the menu bar, in a Liquid Glass row on macOS 26.</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap privacy">
+      <div class="copy">
+        <p class="eyebrow" data-i18n="privEyebrow">Permissions and privacy</p>
+        <h2 class="band-title" style="font-size:var(--step-3);line-height:1.08;font-style:italic" data-i18n="privTitle">It reads the menu bar, and nothing else.</h2>
+        <p class="first" data-i18n="priv1">Hairpin makes no network connections, doesn't log keystrokes and doesn't read app windows.</p>
+        <p data-i18n="priv2">Accessibility lets it read other apps' menu bar icons and click them for you. Screen Recording is optional: with it, Hairpin captures only the menu bar strip to cut out icon shapes and reads the names of menu bar item windows; the shapes stay in memory. Without it, hidden icons show as the app's initial in a rounded square.</p>
+      </div>
+      <div class="tag" role="group" aria-label="Permissions summary" data-i18n-aria="aTag">
+        <span class="hole" aria-hidden="true"></span>
+        <h3 data-i18n="tagTitle">Hairpin · Care label</h3>
+        <dl>
+          <div><dt data-i18n="pA">Accessibility</dt><dd data-i18n="vReq">Required</dd><dd class="note" data-i18n="pAn">Reads and clicks menu bar icons</dd></div>
+          <div><dt data-i18n="pS">Screen Recording</dt><dd data-i18n="vOpt">Optional</dd><dd class="note" data-i18n="pSn">macOS 14+, menu bar strip only</dd></div>
+          <div><dt data-i18n="pN">Network</dt><dd data-i18n="vNone">None</dd></div>
+          <div><dt data-i18n="pK">Keystrokes</dt><dd data-i18n="vNoLog">Never logged</dd></div>
+          <div><dt data-i18n="pW">App window contents</dt><dd data-i18n="vNever">Never read</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="install">
+    <div class="wrap">
+      <div class="band-head">
+        <p class="eyebrow" data-i18n="instEyebrow">Install</p>
+        <h2 data-i18n="instTitle">Three steps, one permission.</h2>
+      </div>
+      <ol class="steps">
+        <li><p data-i18n="s1"><strong>Download Hairpin.dmg</strong>, open it and drag Hairpin onto Applications.</p></li>
+        <li><p data-i18n="s2"><strong>Open Hairpin.</strong> It's signed with a Developer ID and notarized by Apple, so it opens without a warning.</p></li>
+        <li><p data-i18n="s3"><strong>Turn on Accessibility</strong> for Hairpin when it asks.</p></li>
+      </ol>
+      <p class="reqs" data-i18n="reqs">macOS 13 or later on Apple silicon · real icon looks need macOS 14 · the Liquid Glass row needs macOS 26</p>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap">
+      <div class="band-head">
+        <p class="eyebrow" data-i18n="limEyebrow">Limitations</p>
+        <h2 data-i18n="limTitle">What to expect.</h2>
+      </div>
+      <ul class="limits">
+        <li data-i18n="l1">Hairpin doesn't move icons; it clicks the real one. Some apps open their menu by the notch, where the icon was hidden, and a few ignore the click or open a window instead.</li>
+        <li data-i18n="l2">An icon's look is captured while it's shown, so anything that changes, like unread counts or battery level, shows as it last looked.</li>
+        <li data-i18n="l3">With several displays, only the notched one (or the primary one) counts.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span class="sign">Hairpin</span>
+    <span data-i18n="foot1">MIT License. Written from scratch; no code from other menu bar managers.</span>
+    <span data-i18n="foot2">Formerly NotchBar.</span>
+    <a href="https://github.com/HiAriesZhou/Hairpin/releases" data-i18n="releases">Releases</a>
+    <a href="https://github.com/HiAriesZhou/Hairpin">GitHub</a>
+  </div>
+</footer>
+
+<script>
+(() => {
+  // Generic menu bar extras: [name, svg inner markup on a 20-unit grid]. Index 0 launched first, so it sits rightmost.
+  const GLYPHS = [
+    ["Clipboard", '<rect x="5" y="4" width="10" height="13" rx="2"/><path d="M8 4V3h4v1M8 9h4M8 12h3"/>'],
+    ["Timer", '<circle cx="10" cy="11" r="6"/><path d="M10 11V8M8 2.5h4M15 6l1-1"/>'],
+    ["Cloud", '<path d="M6 15h8.5a3.5 3.5 0 0 0 .3-7 5 5 0 0 0-9.6 1.4A2.8 2.8 0 0 0 6 15z"/>'],
+    ["Music", '<path d="M8 15V5l8-2v10"/><circle cx="6" cy="15" r="2"/><circle cx="14" cy="13" r="2"/>'],
+    ["Coffee", '<path d="M4 8h10v4a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M14 9h1.5a2 2 0 0 1 0 4H14M7 3.5c0 1 1 1 1 2M10 3.5c0 1 1 1 1 2"/>'],
+    ["Notes", '<path d="M5 3h7l3 3v11H5z"/><path d="M12 3v3h3M8 10h4M8 13h4"/>'],
+    ["Droplet", '<path d="M10 3c3 4 5 6.5 5 9a5 5 0 0 1-10 0c0-2.5 2-5 5-9z"/>'],
+    ["Keyboard", '<rect x="2.5" y="5.5" width="15" height="9" rx="2"/><path d="M6 9h.01M9 9h.01M12 9h.01M15 9h.01M7 12h6"/>'],
+    ["Eye", '<path d="M2.5 10s3-5 7.5-5 7.5 5 7.5 5-3 5-7.5 5-7.5-5-7.5-5z"/><circle cx="10" cy="10" r="2.2"/>'],
+    ["Chat", '<path d="M4 4.5h12v8H9l-4 3v-3H4z"/>'],
+    ["Shield", '<path d="M10 2.5l6 2.5v4.5c0 4-2.6 6.6-6 8-3.4-1.4-6-4-6-8V5z"/>'],
+    ["Globe", '<circle cx="10" cy="10" r="7"/><path d="M3 10h14M10 3c2 2 2.8 4.5 2.8 7s-.8 5-2.8 7c-2-2-2.8-4.5-2.8-7S8 5 10 3z"/>'],
+    ["Layers", '<path d="M10 3l7 4-7 4-7-4z"/><path d="M3 11l7 4 7-4"/>'],
+    ["Bolt", '<path d="M11 2.5L4.5 11H10l-1 6.5L15.5 9H10z"/>'],
+    ["Mic", '<rect x="7.5" y="2.5" width="5" height="9" rx="2.5"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5"/>'],
+    ["Calendar", '<rect x="3.5" y="4.5" width="13" height="12" rx="2"/><path d="M3.5 8.5h13M7 2.5v3M13 2.5v3"/>'],
+    ["Ruler", '<path d="M3 13.5L13.5 3l3.5 3.5L6.5 17z"/><path d="M7 9.5l1.5 1.5M9.5 7l1.5 1.5M12 4.5l1.5 1.5"/>'],
+    ["Moon", '<path d="M15.5 12.5A6.5 6.5 0 0 1 7.5 4.5a6.5 6.5 0 1 0 8 8z"/>'],
+  ];
+  const MIN = 5, MAX = GLYPHS.length, SLOTS = 7; // SLOTS: extras that fit between the notch and the system icons
+  const HOVER_OPEN = 500, HOVER_CLOSE = 300;
+
+  const T = {
+    en: {
+      navHow: "How it works", eyebrow: "A menu bar app for MacBooks with a notch",
+      headline: 'Pin back what the <em>notch</em> hides.',
+      lede: 'When there are more menu bar icons than fit beside the notch, macOS quietly hides the rest. <strong>Hairpin notices, and keeps them in a small hairpin</strong> at the left end of your icons. Hover or click it, and they drop down in a row.',
+      download: "Download for Mac", meta: "Free · MIT · macOS 13+ · Apple silicon",
+      count: "Menu bar icons",
+      stAll: n => `All ${n} icons fit. With nothing hidden, there is no hairpin.`,
+      stSome: h => `macOS hid <strong>${h} ${h === 1 ? "icon" : "icons"}</strong> behind the notch. Hover the hairpin for half a second, or click it.`,
+      stClick: name => `Hairpin clicks the real icon, so <strong>${name}</strong> opens its own menu.`,
+      hintHover: "Hover me", tooltip: h => `${h} hidden ${h === 1 ? "icon" : "icons"}`,
+      behaveEyebrow: "How it behaves", behaveTitle: "Small, and out of the way until you need it.",
+      t1: "Hover or click", t1d: "Rest the pointer on the hairpin for half a second and the row opens; move away and it closes. Click it and the row stays until you click elsewhere, click the hairpin again or press Escape.",
+      t2: "Only there when needed", t2d: "With nothing hidden, there is no hairpin. It appears the moment macOS runs out of room.",
+      t3: "Keeps up", t3d: "It follows along as you switch apps, long app menus included, as icons come and go, and as the menu bar hides itself or goes full screen.",
+      t4: "Looks right", t4d: "Icons keep their menu bar order. With Screen Recording they look just as they do in the menu bar, in a Liquid Glass row on macOS 26.",
+      privEyebrow: "Permissions and privacy", privTitle: "It reads the menu bar, and nothing else.",
+      priv1: "Hairpin makes no network connections, doesn't log keystrokes and doesn't read app windows.",
+      priv2: "Accessibility lets it read other apps' menu bar icons and click them for you. Screen Recording is optional: with it, Hairpin captures only the menu bar strip to cut out icon shapes and reads the names of menu bar item windows; the shapes stay in memory. Without it, hidden icons show as the app's initial in a rounded square.",
+      tagTitle: "Hairpin · Care label", pA: "Accessibility", vReq: "Required", pAn: "Reads and clicks menu bar icons",
+      pS: "Screen Recording", vOpt: "Optional", pSn: "macOS 14+, menu bar strip only", pN: "Network", vNone: "None",
+      pK: "Keystrokes", vNoLog: "Never logged", vNever: "Never read", pW: "App window contents",
+      instEyebrow: "Install", instTitle: "Three steps, one permission.",
+      s1: "<strong>Download Hairpin.dmg</strong>, open it and drag Hairpin onto Applications.",
+      s2: "<strong>Open Hairpin.</strong> It's signed with a Developer ID and notarized by Apple, so it opens without a warning.",
+      s3: "<strong>Turn on Accessibility</strong> for Hairpin when it asks.",
+      reqs: "macOS 13 or later on Apple silicon · real icon looks need macOS 14 · the Liquid Glass row needs macOS 26",
+      limEyebrow: "Limitations", limTitle: "What to expect.",
+      l1: "Hairpin doesn't move icons; it clicks the real one. Some apps open their menu by the notch, where the icon was hidden, and a few ignore the click or open a window instead.",
+      l2: "An icon's look is captured while it's shown, so anything that changes, like unread counts or battery level, shows as it last looked.",
+      l3: "With several displays, only the notched one (or the primary one) counts.",
+      foot1: "MIT License. Written from scratch; no code from other menu bar managers.", foot2: "Formerly NotchBar.",
+      aDemo: "Interactive demo", aRow: "Hidden icons", aLess: "Fewer icons", aMore: "More icons", aTag: "Permissions summary",
+      releases: "Releases", switchTo: "中文", clock: "Wed Oct 28  9:41",
+    },
+    zh: {
+      navHow: "工作原理", eyebrow: "给带刘海的 MacBook 用的菜单栏小工具",
+      headline: '刘海挡住的，<em>用发卡别起来。</em>',
+      lede: '菜单栏图标多到刘海旁边放不下时，macOS 会悄悄把放不下的藏起来。<strong>Hairpin 会注意到，把它们收进一个小发卡</strong>，放在菜单栏图标的最左端。悬停或点击发卡，被藏起来的图标就在下方展开成一行。',
+      download: "下载 Mac 版", meta: "免费 · MIT · macOS 13+ · Apple 芯片",
+      count: "菜单栏图标",
+      stAll: n => `${n} 个图标都放得下。没有图标被藏起来，就没有发卡。`,
+      stSome: h => `macOS 把 <strong>${h} 个图标</strong>藏在了刘海后面。在发卡上停留半秒，或者点击它。`,
+      stClick: name => `Hairpin 替你点击真实的图标，所以打开的是 <strong>${name}</strong> 自己的菜单。`,
+      hintHover: "悬停这里", tooltip: h => `${h} 个被藏起来的图标`,
+      behaveEyebrow: "它怎么工作", behaveTitle: "很小，用不到时不打扰。",
+      t1: "悬停或点击", t1d: "鼠标在发卡上停留半秒就展开，移开后收起。点击则保持展开，直到点击别处、再点一次发卡或按 Esc。",
+      t2: "只在需要时出现", t2d: "没有图标被藏起来时，发卡不会出现。macOS 一放不下，它就出现。",
+      t3: "随时跟上", t3d: "切换应用（包括菜单很长的应用）、图标增减、菜单栏自动隐藏或进入全屏时，都会自动调整。",
+      t4: "样子一致", t4d: "图标保持菜单栏里的顺序。授予屏幕录制后，样子和菜单栏上一致；在 macOS 26 上用 Liquid Glass 效果。",
+      privEyebrow: "权限与隐私", privTitle: "只读菜单栏，别的都不碰。",
+      priv1: "Hairpin 不联网，不记录按键，也不读取应用窗口的内容。",
+      priv2: "辅助功能权限用来读取其他应用的菜单栏图标，并替你点击。屏幕录制是可选的：授权后，Hairpin 只截取菜单栏这一条来抠出图标形状，并读取菜单栏图标窗口的名称，形状只保存在内存里；不授权时，被藏起来的图标显示为圆角方框里的应用首字母。",
+      tagTitle: "Hairpin · 洗标", pA: "辅助功能", vReq: "必需", pAn: "读取并点击菜单栏图标",
+      pS: "屏幕录制", vOpt: "可选", pSn: "macOS 14+，只截菜单栏", pN: "网络", vNone: "不联网",
+      pK: "按键", vNoLog: "不记录", vNever: "从不读取", pW: "应用窗口内容",
+      instEyebrow: "安装", instTitle: "三步，一个权限。",
+      s1: "<strong>下载 Hairpin.dmg</strong>，打开后把 Hairpin 拖到「应用程序」。",
+      s2: "<strong>打开 Hairpin。</strong>发布版使用 Developer ID 签名并经过 Apple 公证，打开时不会有安全提示。",
+      s3: "按提示为 Hairpin <strong>打开「辅助功能」权限</strong>。",
+      reqs: "需要 macOS 13 或更高版本、Apple 芯片 · 显示图标的真实样子需要 macOS 14 · Liquid Glass 效果需要 macOS 26",
+      limEyebrow: "已知限制", limTitle: "使用前先知道这些。",
+      l1: "Hairpin 不移动图标，而是替你点击真实的图标。有些应用会在原来被藏起来的位置（刘海附近）弹出菜单，少数应用不响应点击，或者打开的是窗口。",
+      l2: "图标的样子是在它显示时截取的，会变化的内容（未读数、电量）显示的是最后一次可见时的状态。",
+      l3: "接了多块显示器时，只看带刘海的那块（没有刘海时看主屏）。",
+      foot1: "MIT 许可。从零写成，没有使用其他菜单栏管理工具的代码。", foot2: "曾用名 NotchBar。",
+      aDemo: "交互演示", aRow: "被藏起来的图标", aLess: "减少图标", aMore: "增加图标", aTag: "权限摘要",
+      releases: "版本发布", switchTo: "EN", clock: "10月28日 周三  9:41",
+    },
+  };
+
+  const $ = id => document.getElementById(id);
+  const stage = $("stage"), screen = $("screen"), extrasEl = $("extras"), row = $("row"), hint = $("hint");
+  let viewLeft = 0, lang = "en", n = 12, open = false, sticky = false, openTimer = 0, closeTimer = 0, lastHidden = 0, lastClicked = null;
+
+  lang = navigator.language.startsWith("zh") ? "zh" : "en";
+  try { const stored = localStorage.getItem("hairpin-lang"); if (stored in T) lang = stored; } catch (e) {}
+
+  const svg = inner => `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+
+  function applyLang() {
+    const t = T[lang];
+    document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+      const v = t[el.dataset.i18n];
+      if (typeof v === "string") el.innerHTML = v;
+    });
+    document.querySelectorAll("[data-i18n-aria]").forEach(el => el.setAttribute("aria-label", t[el.dataset.i18nAria]));
+    $("lang").textContent = t.switchTo;
+    $("lang").lang = lang === "zh" ? "en" : "zh-CN";
+    render();
+  }
+
+  function fit() {
+    const w = stage.clientWidth, narrow = w < 720;
+    const view = narrow ? 560 : 1200, scale = w / view, shift = narrow ? -(1200 - view) : 0;
+    viewLeft = -shift - 12; // left edge of the visible slice, in display coordinates
+    screen.style.transform = `scale(${scale}) translateX(${shift}px)`;
+    stage.style.height = `${300 * scale * (narrow ? 0.8 : 0.72)}px`;
+  }
+
+  function render() {
+    const t = T[lang];
+    const hiddenCount = n > SLOTS ? n - SLOTS + 1 : 0;
+    const shown = GLYPHS.slice(0, n - hiddenCount);       // rightmost, earliest launched
+    const hidden = GLYPHS.slice(n - hiddenCount, n);
+    let html = "";
+    if (hiddenCount) {
+      html += `<button class="pin${lastHidden ? "" : " arrive"}" id="pin" type="button" aria-expanded="${open}" aria-controls="row" title="${t.tooltip(hiddenCount)}" aria-label="Hairpin: ${t.tooltip(hiddenCount)}"><svg><use href="#i-hairpin"/></svg></button>`;
+    }
+    html += shown.slice().reverse().map(([name, g]) => `<span class="extra" title="${name}">${svg(g)}</span>`).join("");
+    html += `<span class="sys"><svg style="width:24px"><use href="#i-battery"/></svg></span><span class="sys"><svg><use href="#i-wifi"/></svg></span><span class="sys"><svg><use href="#i-cc"/></svg></span><span class="clock">${t.clock}</span>`;
+    extrasEl.innerHTML = html;
+    // Menu bar order in the row: later launches on the left, as they would sit in the menu bar.
+    row.innerHTML = hidden.slice().reverse().map(([name, g]) => `<button class="cell" type="button" data-name="${name}" title="${name}" aria-label="${name}">${svg(g)}</button>`).join("");
+
+    if (!hiddenCount) close();
+    lastHidden = hiddenCount;
+    $("n").textContent = n;
+    $("less").disabled = n <= MIN;
+    $("more").disabled = n >= MAX;
+    $("status").innerHTML = lastClicked ? t.stClick(lastClicked) : hiddenCount ? t.stSome(hiddenCount) : t.stAll(n);
+    bindPin();
+    placeRow();
+  }
+
+  function placeRow() {
+    const pin = $("pin");
+    if (!pin) { hint.hidden = true; return; }
+    const display = row.parentElement.getBoundingClientRect();
+    const r = pin.getBoundingClientRect();
+    const scale = display.width / row.parentElement.offsetWidth;
+    const pinCenter = (r.left + r.width / 2 - display.left) / scale;
+    const rowWidth = row.offsetWidth || (row.children.length * 36 + 10);
+    const maxLeft = row.parentElement.offsetWidth - rowWidth - 6;
+    row.style.left = `${Math.max(viewLeft + 6, Math.min(maxLeft, pinCenter - rowWidth / 2))}px`;
+    hint.textContent = T[lang].hintHover;
+    hint.style.left = `${pinCenter - 40}px`;
+    hint.style.top = "48px";
+    hint.hidden = open || lastClicked !== null || hasHovered;
+  }
+
+  let hasHovered = false;
+  function setOpen(value) {
+    open = value;
+    row.hidden = !open;
+    const pin = $("pin");
+    if (pin) pin.setAttribute("aria-expanded", String(open));
+    if (open) { hasHovered = true; hint.hidden = true; placeRow(); }
+  }
+  function close() { sticky = false; clearTimeout(openTimer); clearTimeout(closeTimer); setOpen(false); }
+
+  function bindPin() {
+    const pin = $("pin");
+    if (!pin) return;
+    pin.addEventListener("mouseenter", () => {
+      clearTimeout(closeTimer);
+      if (!open) openTimer = setTimeout(() => setOpen(true), HOVER_OPEN);
+    });
+    pin.addEventListener("mouseleave", () => {
+      clearTimeout(openTimer);
+      if (!sticky) closeTimer = setTimeout(() => setOpen(false), HOVER_CLOSE);
+    });
+    pin.addEventListener("click", e => {
+      e.stopPropagation();
+      clearTimeout(openTimer);
+      clearTimeout(closeTimer);
+      if (open && sticky) close(); else { sticky = true; setOpen(true); }
+    });
+  }
+
+  row.addEventListener("mouseenter", () => clearTimeout(closeTimer));
+  row.addEventListener("mouseleave", () => { if (!sticky) closeTimer = setTimeout(() => setOpen(false), HOVER_CLOSE); });
+  row.addEventListener("click", e => {
+    const cell = e.target.closest(".cell");
+    if (!cell) return;
+    e.stopPropagation();
+    lastClicked = cell.dataset.name;
+    close();
+    render();
+    if (e.detail === 0) $("pin")?.focus(); // keyboard activation
+  });
+  document.addEventListener("click", e => { if (open && !row.contains(e.target)) close(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && open) { close(); $("pin")?.focus(); } });
+
+  $("less").addEventListener("click", () => { if (n > MIN) { n--; lastClicked = null; render(); } });
+  $("more").addEventListener("click", () => { if (n < MAX) { n++; lastClicked = null; render(); } });
+  $("lang").addEventListener("click", () => {
+    lang = lang === "en" ? "zh" : "en";
+    try { localStorage.setItem("hairpin-lang", lang); } catch (e) {}
+    applyLang();
+  });
+
+  let stageWidth = 0;
+  new ResizeObserver(([entry]) => {
+    if (entry.contentRect.width === stageWidth) return;
+    stageWidth = entry.contentRect.width;
+    fit(); placeRow();
+  }).observe(stage);
+  fit();
+  applyLang();
+})();
+</script>
+</body>
+</html>
