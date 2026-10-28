@@ -123,6 +123,9 @@ p { margin: 0; }
 .btn:active { transform: scale(0.97); }
 .btn svg { width: 18px; height: 18px; }
 .meta { font: 400 var(--step--1)/1.5 var(--mono); color: var(--ink-soft); }
+.star-link { display: inline-flex; align-items: center; gap: 5px; color: var(--satin-ink); text-decoration: none; white-space: nowrap; }
+.star-link svg { width: 13px; height: 13px; }
+.star-link:hover { text-decoration: underline; }
 
 /* Demo: a slice of a MacBook's top edge */
 .demo { padding-block: 8px 72px; }
@@ -258,13 +261,41 @@ section.band { padding-block: 72px; border-top: 1px solid var(--rule); }
 .limits li { padding-left: 22px; position: relative; color: var(--ink-soft); }
 .limits li::before { content: ""; position: absolute; left: 2px; top: 0.72em; width: 8px; height: 1px; background: var(--ink-soft); }
 
-footer { border-top: 1px solid var(--rule); padding-block: 36px 48px; font-size: var(--step--1); color: var(--ink-soft); }
-footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: baseline; }
-footer .sign { font: italic 500 var(--step-1)/1 var(--display); color: var(--ink); margin-right: auto; }
+footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var(--ink-soft); }
+.foot { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 36px 72px; align-items: start; }
+.foot-main { display: grid; gap: 14px; justify-items: start; min-width: 0; }
+.foot .sign { font: italic 500 var(--step-2)/1 var(--display); color: var(--ink); }
+.credit { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.heart { width: 15px; height: 15px; color: var(--satin); }
+.author { display: inline-flex; align-items: center; gap: 7px; color: var(--ink); font-weight: 600; text-decoration: none; }
+.author img { width: 24px; height: 24px; border-radius: 50%; box-shadow: 0 0 0 1px var(--rule); }
+.author:hover { text-decoration: underline; }
+.invite { max-width: 34em; margin-top: 6px; }
+.star-btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px;
+  border: 1px solid var(--rule); background: var(--tag); color: var(--ink); text-decoration: none;
+  font: 600 var(--step--1)/1 var(--body); transition: transform 120ms ease-out, border-color 160ms;
+}
+.star-btn svg { width: 15px; height: 15px; color: var(--satin); }
+.star-btn:hover { border-color: var(--satin-ink); }
+.star-btn:active { transform: scale(0.97); }
+.foot-nav { display: grid; min-width: 15rem; margin-top: 4px; border-bottom: 1px solid var(--rule); }
+.foot-nav a {
+  display: flex; align-items: center; justify-content: space-between; gap: 32px; padding: 11px 2px;
+  border-top: 1px solid var(--rule); color: var(--ink); text-decoration: none; transition: color 160ms;
+}
+.foot-nav svg { width: 14px; height: 14px; color: var(--ink-soft); transition: transform 160ms ease-out, color 160ms; }
+.foot-nav a:hover { color: var(--satin-ink); }
+.foot-nav a:hover svg { color: var(--satin-ink); transform: translate(2px, -2px); }
+.foot-nav a.dl:hover svg { transform: translateY(2px); }
+.foot-legal { grid-column: 1 / -1; padding-top: 22px; border-top: 1px solid var(--rule); font-size: var(--step--1); }
+.foot-legal a { color: var(--ink-soft); }
 
 @media (max-width: 760px) {
   .top a.plain { display: none; }
-  .traits, .privacy, .steps { grid-template-columns: minmax(0, 1fr); }
+  .traits, .privacy, .steps, .foot { grid-template-columns: minmax(0, 1fr); }
+  .meta .sep { display: none; }
+  .meta .star-link { display: flex; width: fit-content; margin-top: 4px; }
   .privacy { gap: 40px; }
   section.band { padding-block: 56px; }
 }
@@ -287,6 +318,9 @@ footer .sign { font: italic 500 var(--step-1)/1 var(--display); color: var(--ink
         </g>
       </g>
     </symbol>
+    <symbol id="i-star" viewBox="0 0 16 16"><path fill="currentColor" d="M8 1.2l2 4.3 4.7.5-3.5 3.2 1 4.6L8 11.4l-4.2 2.4 1-4.6L1.3 6l4.7-.5z"/></symbol>
+    <symbol id="i-down" viewBox="0 0 14 14"><path d="M7 2v9M3.5 7.5 7 11l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-out" viewBox="0 0 14 14"><path d="M4 10 10 4M5 4h5v5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-apple" viewBox="0 0 14 17"><path fill="currentColor" d="M11.6 9c0-2 1.6-2.9 1.7-3-1-1.4-2.4-1.6-2.9-1.6-1.2-.1-2.4.7-3 .7-.6 0-1.6-.7-2.6-.7C3.400 4.4 2.1 5.200 1.4 6.400 0 8.900 1.000 12.600 2.400 14.500c.6.900 1.400 2 2.400 1.900 1-.1 1.300-.6 2.500-.6s1.500.6 2.500.6c1 0 1.700-.9 2.300-1.900.7-1.100 1-2.100 1-2.200 0 0-2.400-.9-2.500-3.300zM9.700 3.100c.5-.7.900-1.600.8-2.500-.8 0-1.800.5-2.300 1.200-.5.600-.9 1.500-.8 2.400.9.100 1.800-.4 2.300-1.100z"/></symbol>
     <symbol id="i-battery" viewBox="0 0 26 14"><rect x="1" y="2" width="21" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".55"/><rect x="3" y="4" width="14" height="6" rx="1.5" fill="currentColor"/><path d="M23.5 5.5v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".55"/></symbol>
     <symbol id="i-wifi" viewBox="0 0 18 18"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2 7.5a10 10 0 0 1 14 0"/><path d="M4.6 10.2a6.3 6.3 0 0 1 8.8 0"/></g><circle cx="9" cy="13.4" r="1.6" fill="currentColor"/></symbol>
@@ -314,7 +348,7 @@ footer .sign { font: italic 500 var(--step-1)/1 var(--display); color: var(--ink
         <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2.5v9M5 8l4 4 4-4M3 15.5h12"/></svg>
         <span data-i18n="download">Download for Mac</span>
       </a>
-      <span class="meta" data-i18n="meta">Free · MIT · macOS 13+ · Apple silicon</span>
+      <span class="meta"><span data-i18n="meta">Free · MIT · macOS 13+ · Apple silicon</span><span class="sep" aria-hidden="true"> · </span><a class="star-link" href="https://github.com/HiAriesZhou/Hairpin"><svg aria-hidden="true"><use href="#i-star"/></svg><span data-i18n="star">Pin a star on GitHub</span></a></span>
     </div>
   </section>
 
@@ -414,12 +448,20 @@ footer .sign { font: italic 500 var(--step-1)/1 var(--display); color: var(--ink
 </main>
 
 <footer>
-  <div class="wrap">
-    <span class="sign">Hairpin</span>
-    <span data-i18n="foot1">MIT License. Written from scratch; no code from other menu bar managers.</span>
-    <span data-i18n="foot2">Formerly NotchBar.</span>
-    <a href="https://github.com/HiAriesZhou/Hairpin/releases" data-i18n="releases">Releases</a>
-    <a href="https://github.com/HiAriesZhou/Hairpin">GitHub</a>
+  <div class="wrap foot">
+    <div class="foot-main">
+      <span class="sign">Hairpin</span>
+      <p class="credit" data-i18n="credit">Built with <svg class="heart" viewBox="0 0 16 16" role="img" aria-label="love"><path fill="currentColor" d="M8 14.2S1.8 10.4 1.8 6a3.3 3.3 0 0 1 6.2-1.6A3.3 3.3 0 0 1 14.2 6c0 4.4-6.2 8.2-6.2 8.2z"/></svg> by <a class="author" href="https://github.com/HiAriesZhou"><img src="avatar.jpg" alt="" width="24" height="24">AriesZhou</a></p>
+      <p class="invite" data-i18n="invite">If Hairpin keeps your menu bar tidy, pin a star on its GitHub repo so other notch owners can find it.</p>
+      <a class="star-btn" href="https://github.com/HiAriesZhou/Hairpin"><svg aria-hidden="true"><use href="#i-star"/></svg><span data-i18n="starBtn">Pin a star</span></a>
+    </div>
+    <nav class="foot-nav" aria-label="Links" data-i18n-aria="aFoot">
+      <a class="dl" href="https://github.com/HiAriesZhou/Hairpin/releases/latest/download/Hairpin.dmg"><span data-i18n="navDl">Download</span><svg aria-hidden="true"><use href="#i-down"/></svg></a>
+      <a href="https://github.com/HiAriesZhou/Hairpin/releases"><span data-i18n="releases">Release notes</span><svg aria-hidden="true"><use href="#i-out"/></svg></a>
+      <a href="https://github.com/HiAriesZhou/Hairpin/blob/main/docs/how-it-works.md"><span data-i18n="navHow">How it works</span><svg aria-hidden="true"><use href="#i-out"/></svg></a>
+      <a href="https://github.com/HiAriesZhou/Hairpin"><span data-i18n="navSrc">Source code</span><svg aria-hidden="true"><use href="#i-out"/></svg></a>
+    </nav>
+    <p class="foot-legal" data-i18n="license">Open source under the <a href="https://github.com/HiAriesZhou/Hairpin/blob/main/LICENSE">MIT License</a>.</p>
   </div>
 </footer>
 
@@ -449,6 +491,8 @@ footer .sign { font: italic 500 var(--step-1)/1 var(--display); color: var(--ink
   const MIN = 5, MAX = GLYPHS.length, SLOTS = 7; // SLOTS: extras that fit between the notch and the system icons
   const HOVER_OPEN = 500, HOVER_CLOSE = 300;
 
+  const HEART = label => `<svg class="heart" viewBox="0 0 16 16" role="img" aria-label="${label}"><path fill="currentColor" d="M8 14.2S1.8 10.4 1.8 6a3.3 3.3 0 0 1 6.2-1.6A3.3 3.3 0 0 1 14.2 6c0 4.4-6.2 8.2-6.2 8.2z"/></svg>`;
+  const AUTHOR = '<a class="author" href="https://github.com/HiAriesZhou"><img src="avatar.jpg" alt="" width="24" height="24">AriesZhou</a>';
   const T = {
     en: {
       navHow: "How it works", eyebrow: "A menu bar app for MacBooks with a notch",
@@ -480,9 +524,13 @@ footer .sign { font: italic 500 var(--step-1)/1 var(--display); color: var(--ink
       l1: "Hairpin doesn't move icons; it clicks the real one. Some apps open their menu by the notch, where the icon was hidden, and a few ignore the click or open a window instead.",
       l2: "An icon's look is captured while it's shown, so anything that changes, like unread counts or battery level, shows as it last looked.",
       l3: "With several displays, only the notched one (or the primary one) counts.",
-      foot1: "MIT License. Written from scratch; no code from other menu bar managers.", foot2: "Formerly NotchBar.",
+      star: "Pin a star on GitHub", starBtn: "Pin a star",
+      credit: `Built with ${HEART("love")} by ${AUTHOR}`,
+      invite: "If Hairpin keeps your menu bar tidy, pin a star on its GitHub repo so other notch owners can find it.",
+      navDl: "Download", navSrc: "Source code", aFoot: "Links",
+      license: 'Open source under the <a href="https://github.com/HiAriesZhou/Hairpin/blob/main/LICENSE">MIT License</a>.',
       aDemo: "Interactive demo", aRow: "Hidden icons", aLess: "Fewer icons", aMore: "More icons", aTag: "Permissions summary",
-      releases: "Releases", switchTo: "中文", clock: "Wed Oct 28  9:41",
+      releases: "Release notes", switchTo: "中文", clock: "Wed Oct 28  9:41",
     },
     zh: {
       navHow: "工作原理", eyebrow: "给带刘海的 MacBook 用的菜单栏小工具",
@@ -514,9 +562,13 @@ footer .sign { font: italic 500 var(--step-1)/1 var(--display); color: var(--ink
       l1: "Hairpin 不移动图标，而是替你点击真实的图标。有些应用会在原来被藏起来的位置（刘海附近）弹出菜单，少数应用不响应点击，或者打开的是窗口。",
       l2: "图标的样子是在它显示时截取的，会变化的内容（未读数、电量）显示的是最后一次可见时的状态。",
       l3: "接了多块显示器时，只看带刘海的那块（没有刘海时看主屏）。",
-      foot1: "MIT 许可。从零写成，没有使用其他菜单栏管理工具的代码。", foot2: "曾用名 NotchBar。",
+      star: "去 GitHub 别一颗星", starBtn: "别一颗星",
+      credit: `由 ${AUTHOR} 用 ${HEART("爱心")} 制作`,
+      invite: "要是 Hairpin 帮你把菜单栏收拾利落了，就去 GitHub 给它别一颗星，让更多刘海屏用户找到它。",
+      navDl: "下载", navSrc: "源代码", aFoot: "链接",
+      license: '基于 <a href="https://github.com/HiAriesZhou/Hairpin/blob/main/LICENSE">MIT 协议</a>开源。',
       aDemo: "交互演示", aRow: "被藏起来的图标", aLess: "减少图标", aMore: "增加图标", aTag: "权限摘要",
-      releases: "版本发布", switchTo: "EN", clock: "10月28日 周三  9:41",
+      releases: "更新日志", switchTo: "EN", clock: "10月28日 周三  9:41",
     },
   };
 
