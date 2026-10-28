@@ -12,7 +12,7 @@
 A tiny macOS menu bar app that keeps the icons hidden behind the MacBook notch within reach.
 一个极简的 macOS 菜单栏小工具：把被 MacBook 刘海挡住的菜单栏图标收起来，随时点得到。
 
-[English](#english) · [中文](#中文)
+**[Download Hairpin.dmg](https://github.com/HiAriesZhou/Hairpin/releases/latest/download/Hairpin.dmg)** · [hairpin.arieszhou.com](https://hairpin.arieszhou.com) · [English](#english) · [中文](#中文)
 
 > Formerly **NotchBar**. If you cloned the old repository: `git remote set-url origin https://github.com/HiAriesZhou/Hairpin.git`
 
@@ -31,7 +31,7 @@ When there are more menu bar icons than fit beside the notch, macOS quietly hide
 
 ### Install
 
-1. Download **Hairpin.dmg** from [Releases](https://github.com/HiAriesZhou/Hairpin/releases/latest), open it and drag Hairpin onto Applications. (`Hairpin.zip` holds the same app.)
+1. Download [**Hairpin.dmg**](https://github.com/HiAriesZhou/Hairpin/releases/latest/download/Hairpin.dmg) from the latest release, open it and drag Hairpin onto Applications. (`Hairpin.zip` on the [Releases](https://github.com/HiAriesZhou/Hairpin/releases/latest) page holds the same app.)
 2. Open Hairpin. Releases are signed with a Developer ID and notarized by Apple, so it opens without a warning.
 3. Turn on **Accessibility** for Hairpin when it asks.
 
@@ -85,7 +85,7 @@ Needs Xcode or the Command Line Tools. An ad hoc build gets new privacy grants a
 
 ### 安装
 
-1. 从 [Releases](https://github.com/HiAriesZhou/Hairpin/releases/latest) 下载 **Hairpin.dmg**，打开后把 Hairpin 拖到「Applications」。（`Hairpin.zip` 里是同一个 app。）
+1. 下载最新正式版的 [**Hairpin.dmg**](https://github.com/HiAriesZhou/Hairpin/releases/latest/download/Hairpin.dmg)，打开后把 Hairpin 拖到「Applications」。（[Releases](https://github.com/HiAriesZhou/Hairpin/releases/latest) 页面上的 `Hairpin.zip` 里是同一个 app。）
 2. 打开 Hairpin。发布版使用 Developer ID 签名并经过 Apple 公证，可以直接打开，不会有安全提示。
 3. 按提示为 Hairpin 打开「辅助功能」权限。
 
