@@ -212,8 +212,11 @@ enum Screens {
         let height = layout.row(index).map(\.frame.height).max() ?? NSStatusBar.system.thickness
         let row = NSRect(x: screen.minX, y: screen.maxY - height, width: screen.width, height: height)
         switch placement {
-        case .ownIcon:
-            return StackAnchor(place: .button, row: row)
+        case let .ownIcon(window):
+            // The flip from Quartz to Cocoa is the same as the other way.
+            let frame = Geometry.quartzRect(fromCocoa: window.frame,
+                                            primaryScreenHeight: NSScreen.screens.first?.frame.height ?? 0)
+            return StackAnchor(place: .button(frame: frame), row: row)
         case let .slot(rightEdge):
             return StackAnchor(place: .slot(minX: rightEdge - NotchStack.pinWidth, width: NotchStack.pinWidth), row: row)
         case let .covering(window):

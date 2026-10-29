@@ -11,8 +11,9 @@ struct StackEntry: Equatable {
 /// screen's menu bar strip (Cocoa coordinates).
 struct StackAnchor: Equatable {
     enum Place: Equatable {
-        /// Hairpin's own icon is the leftmost shown item and holds them.
-        case button
+        /// Hairpin's own icon is the leftmost shown item and holds them; its
+        /// copy in this menu bar is at `frame`.
+        case button(frame: NSRect)
         /// The pin spanning this part of the menu bar.
         case slot(minX: CGFloat, width: CGFloat)
     }
@@ -82,7 +83,14 @@ final class NotchStack: NSObject {
     private var pointerOrigin: NSPoint?
 
     /// True while Hairpin's icon holds the items.
-    var usesButton: Bool { !entries.isEmpty && anchor?.place == .button }
+    var usesButton: Bool { !entries.isEmpty && buttonFrame != nil }
+
+    /// Where Hairpin's icon holding the items is, in the menu bar the pin
+    /// belongs to. Its button's own window can be its copy in another one.
+    private var buttonFrame: NSRect? {
+        guard case let .button(frame)? = anchor?.place else { return nil }
+        return frame
+    }
 
     /// Hairpin's own icon, which opens the items while it's the leftmost one.
     func attach(to button: NSStatusBarButton) {
@@ -305,8 +313,8 @@ final class NotchStack: NSObject {
         if let origin = pointerOrigin {
             opener = NSRect(origin: origin, size: .zero)
             top = origin.y
-        } else if let anchor, let window = (usesButton ? button?.window : pile) {
-            opener = window.frame
+        } else if let anchor, let frame = (usesButton ? buttonFrame : pile?.frame) {
+            opener = frame
             top = anchor.row.minY
         } else {
             return
