@@ -86,9 +86,10 @@ public struct MenuBarLayout {
     /// is the leftmost shown item; `own` may be reported in another screen's
     /// menu bar, so its windows (`ownWindows`, all its copies), when known,
     /// settle which one is here. Otherwise the pin, `width` wide, takes the first free slot (see
-    /// `Geometry.stackSlot`); failing that, it sits on the leftmost shown
-    /// window in `coverable` (windows of known items, which are then listed
-    /// with the hidden ones). Shown means drawn where it can be seen: before
+    /// `Geometry.stackSlot`); failing that, Hairpin's icon holds them if it's
+    /// shown at all, else the pin sits on the leftmost shown window in
+    /// `coverable` (windows of known items, which are then listed with the
+    /// hidden ones). Shown means drawn where it can be seen: before
     /// macOS 26 an overflowed window is still drawn, under the notch.
     public func placement(width: CGFloat, screen: Int, appMenus: CGRect?, own: CGRect?, ownWindows: Set<UInt32> = [],
                           coverable: Set<UInt32>) -> StackPlacement? {
@@ -104,6 +105,8 @@ public struct MenuBarLayout {
                                          leftmostShown: leftmost.frame, margin: 2) {
             return .slot(rightEdge: edge)
         }
+        // Rather than cover an item and show a pin beside our own icon.
+        if let ownCopy, shown.contains(where: { $0.id == ownCopy.id }) { return .ownIcon(ownCopy) }
         return shown.reversed().first { coverable.contains($0.id) }.map(StackPlacement.covering)
     }
 
