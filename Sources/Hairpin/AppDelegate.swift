@@ -138,6 +138,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: - Scanning
 
     @objc private func environmentChanged(_ notification: Notification) {
+        // New displays bring new windows; look for ours without waiting out
+        // the back-off of probes that failed before.
+        if notification.name == NSApplication.didChangeScreenParametersNotification { failedProbes = 0 }
         refresh()
         // A newly active app's menus can land in the menu bar a moment later,
         // changing where the hidden items fit; look again once they have.
