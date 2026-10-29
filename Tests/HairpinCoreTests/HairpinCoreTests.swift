@@ -544,7 +544,33 @@ final class StackPlacementTests: XCTestCase {
     func testOwnIconAtTheLeftEndHoldsTheItems() {
         let layout = MenuBarLayout(windows: [shown(1, x: 1200), shown(2, x: 1000)], screens: [builtIn])
         XCTAssertEqual(layout.placement(width: 20, screen: 0, appMenus: shortMenus,
-                                        own: CGRect(x: 1000, y: 0, width: 30, height: 33), coverable: []), .ownIcon)
+                                        own: CGRect(x: 1000, y: 0, width: 30, height: 33), coverable: []),
+                       .ownIcon(shown(2, x: 1000)))
+    }
+
+    func testOwnIconReportedOnAnotherScreenStillHoldsTheItems() {
+        // With an external display, Hairpin's icon can report its copy in the
+        // other menu bar (here parked above its screen); its copy in the
+        // notched one is the leftmost shown item there.
+        let windows = [shown(1, x: 1200), shown(2, x: 1000), shown(3, x: 970, onscreen: false),
+                       StatusWindow(id: 11, frame: CGRect(x: 1674, y: -1142, width: 30, height: 30), isOnscreen: false),
+                       StatusWindow(id: 12, frame: CGRect(x: 1644, y: -1142, width: 30, height: 30), isOnscreen: false),
+                       StatusWindow(id: 13, frame: CGRect(x: 1614, y: -1142, width: 30, height: 30), isOnscreen: false)]
+        let layout = MenuBarLayout(windows: windows, screens: [builtIn, external])
+        XCTAssertEqual(layout.placement(width: 20, screen: 0, appMenus: shortMenus,
+                                        own: CGRect(x: 1647, y: -1139, width: 24, height: 24), coverable: [1]),
+                       .ownIcon(shown(2, x: 1000)))
+    }
+
+    func testOwnIconHiddenInTheNotchedMenuBarDoesntHoldTheItems() {
+        // Shown in the other menu bar, but overflowed in the notched one.
+        let windows = [shown(1, x: 1200), shown(2, x: 970, onscreen: false),
+                       StatusWindow(id: 11, frame: CGRect(x: 1674, y: -1080, width: 30, height: 33), isOnscreen: true),
+                       StatusWindow(id: 12, frame: CGRect(x: 1644, y: -1080, width: 30, height: 33), isOnscreen: true)]
+        let layout = MenuBarLayout(windows: windows, screens: [builtIn, external])
+        XCTAssertEqual(layout.placement(width: 20, screen: 0, appMenus: shortMenus,
+                                        own: CGRect(x: 1647, y: -1076, width: 24, height: 24), coverable: [1]),
+                       .slot(rightEdge: 1198))
     }
 
     func testANarrowGapRightOfTheNotchFitsThePin() {

@@ -82,8 +82,9 @@ public struct MenuBarLayout {
     /// the left end of the items shown there; nil while that menu bar isn't
     /// showing, or when there's no room and nothing it may sit on.
     ///
-    /// Hairpin's own icon (`own`) holds them when it's the leftmost shown
-    /// item. Otherwise the pin, `width` wide, takes the first free slot (see
+    /// Hairpin's own icon (`own`) holds them when its copy in this menu bar
+    /// is the leftmost shown item; `own` may be reported in another screen's
+    /// menu bar. Otherwise the pin, `width` wide, takes the first free slot (see
     /// `Geometry.stackSlot`); failing that, it sits on the leftmost shown
     /// window in `coverable` (windows of known items, which are then listed
     /// with the hidden ones). Shown means drawn where it can be seen: before
@@ -95,7 +96,7 @@ public struct MenuBarLayout {
             Geometry.visibility(of: window.frame, screens: screens, appMenus: appMenus, window: window) == .visible
         }
         guard let leftmost = shown.last else { return nil }
-        if let own, abs(own.minX - leftmost.frame.minX) <= 2 { return .ownIcon }
+        if let own, copies(of: own)[screen]?.id == leftmost.id { return .ownIcon(leftmost) }
         if let edge = Geometry.stackSlot(width: width, screens: screens, screen: screen, appMenus: appMenus,
                                          leftmostShown: leftmost.frame, margin: 2) {
             return .slot(rightEdge: edge)
@@ -177,8 +178,9 @@ public struct MenuBarLayout {
 
 /// Where the pin holding the hidden items goes; see `MenuBarLayout.placement`.
 public enum StackPlacement: Equatable, Sendable {
-    /// Hairpin's own icon is the leftmost shown item and holds them.
-    case ownIcon
+    /// Hairpin's own icon, in this window, is the leftmost shown item and
+    /// holds them.
+    case ownIcon(StatusWindow)
     /// A free slot ending at this x (Quartz).
     case slot(rightEdge: CGFloat)
     /// On this shown item's window, for lack of room.
