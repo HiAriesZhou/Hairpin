@@ -84,19 +84,22 @@ public struct MenuBarLayout {
     ///
     /// Hairpin's own icon (`own`) holds them when its copy in this menu bar
     /// is the leftmost shown item; `own` may be reported in another screen's
-    /// menu bar. Otherwise the pin, `width` wide, takes the first free slot (see
+    /// menu bar, so its windows (`ownWindows`, all its copies), when known,
+    /// settle which one is here. Otherwise the pin, `width` wide, takes the first free slot (see
     /// `Geometry.stackSlot`); failing that, it sits on the leftmost shown
     /// window in `coverable` (windows of known items, which are then listed
     /// with the hidden ones). Shown means drawn where it can be seen: before
     /// macOS 26 an overflowed window is still drawn, under the notch.
-    public func placement(width: CGFloat, screen: Int, appMenus: CGRect?, own: CGRect?,
+    public func placement(width: CGFloat, screen: Int, appMenus: CGRect?, own: CGRect?, ownWindows: Set<UInt32> = [],
                           coverable: Set<UInt32>) -> StackPlacement? {
         guard isShowing(screen) else { return nil }
         let shown = row(screen).filter { window in
             Geometry.visibility(of: window.frame, screens: screens, appMenus: appMenus, window: window) == .visible
         }
         guard let leftmost = shown.last else { return nil }
-        if let own, copies(of: own)[screen]?.id == leftmost.id { return .ownIcon(leftmost) }
+        let ownCopy = row(screen).first { ownWindows.contains($0.id) }
+            ?? own.flatMap { window(reportedAt: $0, owned: [], screen: screen) }
+        if ownCopy?.id == leftmost.id { return .ownIcon(leftmost) }
         if let edge = Geometry.stackSlot(width: width, screens: screens, screen: screen, appMenus: appMenus,
                                          leftmostShown: leftmost.frame, margin: 2) {
             return .slot(rightEdge: edge)
@@ -123,6 +126,71 @@ public struct MenuBarLayout {
             for (item, window) in zip(ordered, appWindows) { result[item.id] = window }
         }
         return result
+    }
+
+    /// The window holding the button at `frame` in the row it's reported in,
+    /// with that row's screen. Accessibility reports items in whichever menu
+    /// bar is active; there, the window is the item's own.
+    public func reportedWindow(of frame: CGRect) -> (screen: Int, window: StatusWindow)? {
+        for (row, windows) in rows {
+            if let rank = Self.place(of: frame, in: windows, sameLevel: true) { return (row, windows[rank]) }
+        }
+        return nil
+    }
+
+    /// The window in `screen`'s row of the item reported at `frame`: the one
+    /// it's reported on, if that's in this row; else the one of `owned` (its
+    /// windows, see `windowOwners`) in this row; else its copy counted from
+    /// the right (see `copies(of:)`).
+    ///
+    /// Counting can miss: on macOS 26 a row that overflows moves the windows
+    /// it hides to its left end, while the other rows keep their order.
+    public func window(reportedAt frame: CGRect, owned: Set<UInt32>, screen: Int) -> StatusWindow? {
+        if let reported = reportedWindow(of: frame), reported.screen == screen { return reported.window }
+        if let window = row(screen).first(where: { owned.contains($0.id) }) { return window }
+        return copies(of: frame)[screen]
+    }
+
+    /// Which item each window belongs to, by item id. An item owns every
+    /// window it's reported on, in any row, and keeps it while it lives,
+    /// whichever menu bar macOS moves it to. Claims in `old` stand while
+    /// their windows exist. An item reported on another window in a row than
+    /// it had there, or on a window another item had, is taken to be a new
+    /// item under an old id (ids are places among an app's items, which shift)
+    /// or one Accessibility caught mid-move: both items' claims are dropped.
+    public func windowOwners(for items: [ExtraItem], keeping old: [UInt32: String]) -> [UInt32: String] {
+        let present = Set(allRows.map(\.id))
+        var result = old.filter { present.contains($0.key) }
+        for item in items {
+            guard let frame = item.frame, frame.width > 0, frame.height > 0,
+                  let reported = reportedWindow(of: frame) else { continue }
+            let window = reported.window.id
+            let sameRow = Set(row(reported.screen).map(\.id))
+            let movedInRow = result.contains { $0.value == item.id && sameRow.contains($0.key) && $0.key != window }
+            let stale = [movedInRow ? item.id : nil, result[window].flatMap { $0 == item.id ? nil : $0 }]
+                .compactMap { $0 }
+            result = result.filter { !stale.contains($0.value) }
+            result[window] = item.id
+        }
+        return result
+    }
+
+    /// The windows that grew by `amount` (to half a point) between two window
+    /// lists, one in each menu bar: the copies of an item just made that much
+    /// wider. Empty unless every row has exactly one, so another item resizing
+    /// meanwhile, or a menu bar not laid out again yet, finds nothing.
+    public static func grownWindows(from before: [StatusWindow], to after: [StatusWindow], by amount: CGFloat,
+                                    screens: [ScreenInfo]) -> Set<UInt32> {
+        let widths = Dictionary(before.map { ($0.id, $0.frame.width) }, uniquingKeysWith: { first, _ in first })
+        var found = Set<UInt32>()
+        for windows in MenuBarLayout(windows: after, screens: screens).rows.values {
+            let grown = windows.filter { window in
+                widths[window.id].map { abs(window.frame.width - $0 - amount) < 0.5 } ?? false
+            }
+            guard grown.count == 1 else { return [] }
+            found.insert(grown[0].id)
+        }
+        return found
     }
 
     /// The copies of the item whose button is at `frame`, by screen index.

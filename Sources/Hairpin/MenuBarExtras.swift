@@ -196,16 +196,18 @@ enum Screens {
 
     /// Where the hidden items are kept in the target screen's menu bar (see
     /// `MenuBarLayout.placement`), in Cocoa coordinates; `own` is Hairpin's
-    /// icon frame (Quartz) and `coverable` the windows of known shown items.
+    /// icon frame (Quartz), `ownWindows` its windows if known, and
+    /// `coverable` the windows of known shown items.
     /// Nil while that menu bar isn't showing, or with no place for the pin.
     @MainActor
     static func stackAnchor(layout: MenuBarLayout, screens: [ScreenInfo], appMenus: CGRect?, own: CGRect?,
-                            coverable: Set<UInt32>) -> StackAnchor? {
+                            ownWindows: Set<UInt32>, coverable: Set<UInt32>) -> StackAnchor? {
         let index = MenuBarLayout.targetScreen(in: screens)
         // `screens` comes from `current()`, in NSScreen.screens order.
         guard index < NSScreen.screens.count,
               let placement = layout.placement(width: NotchStack.pinWidth, screen: index, appMenus: appMenus,
-                                               own: own, coverable: coverable) else { return nil }
+                                               own: own, ownWindows: ownWindows, coverable: coverable)
+        else { return nil }
         let screen = NSScreen.screens[index].frame
         // The row's windows are as tall as the menu bar; visibleFrame says
         // nothing when the menu bar hides itself.
