@@ -49,8 +49,8 @@ Start without it (`tccutil reset ScreenCapture com.hiarieszhou.hairpin`).
 - [ ] Switching to the app with long menus: the hairpin moves so it covers none of them (left of the notch, or onto the leftmost shown icon on a capsule that hides it, and that icon then shows up in the row too). Switching back: it returns right of the notch.
 - [ ] A running app adding a menu bar item (e.g. a timer starting, or Codex using the computer) moves the hairpin within about a second, without switching apps; it never ends up over a shown icon.
 - [ ] With "Automatically hide and show the menu bar" on, the hairpin appears with the menu bar and goes with it, and opening Hairpin.app again still reaches the hidden icons or the menu.
-- [ ] If Hairpin's own icon is the leftmost shown one, that icon is the hairpin: a click opens the row, a right-click or Control-click opens the menu.
-- [ ] Relaunch a menu bar app so its icon lands left of Hairpin's with too little room beside the notch: no pin covers it. With icons hidden, Hairpin's own icon holds them; with none hidden, no pin shows at all.
+- [ ] While Hairpin's own icon is shown, wherever it is, that icon is the hairpin: no separate pin appears, a click opens the row, a right-click or Control-click opens the menu.
+- [ ] Relaunch a menu bar app so its icon lands left of Hairpin's, once with long app menus and once with short ones: no pin appears or covers it. With icons hidden, Hairpin's own icon holds them; with none hidden, no pin shows at all.
 - [ ] In a full-screen app, the hairpin isn't shown.
 
 ## The row

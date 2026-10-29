@@ -16,7 +16,7 @@ Hairpin rescans when apps launch, quit or switch (again 0.4 s after a switch, on
 
 ## Placing the pin
 
-The pin sits at the left end of the shown items. It goes in the first free slot that covers neither the frontmost app's menus (which can run past the notch) nor any item: right of the notch, else left of it. With no room, it sits on the leftmost shown item on an opaque capsule and lists that item with the hidden ones. When Hairpin's own icon is the leftmost item, that icon holds the hidden items itself. While the menu bar is hidden, so is the pin.
+With nothing hidden there's no pin. While Hairpin's own icon is shown in the notched menu bar, wherever it is among the items, that icon holds the hidden items itself, so there's never a pin beside it. Otherwise the pin sits at the left end of the shown items, in the first free slot that covers neither the frontmost app's menus (which can run past the notch) nor any item: right of the notch, else left of it. With no room, it sits on the leftmost shown item on an opaque capsule and lists that item with the hidden ones. While the menu bar is hidden, so is the pin.
 
 ## Showing items
 
