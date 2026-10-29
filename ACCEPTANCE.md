@@ -90,6 +90,7 @@ Start without it (`tccutil reset ScreenCapture com.hiarieszhou.hairpin`).
 ## Multiple displays (optional)
 
 - [ ] With an external display attached and active, icons hidden on the built-in display still appear in the row, each with its own look (no app showing another app's icon).
+- [ ] With an external display attached, clicking in either display's menu bar or desktop, and opening an item from the row then clicking elsewhere, never shows a second hairpin beside Hairpin's own icon; while Hairpin's icon is the leftmost shown one on the built-in display, it alone holds the hidden items and its row opens right under it.
 - [ ] With the lid closed (external display only), icons that overflow that menu bar are held by the hairpin there; nothing is marked hidden otherwise.
 
 ## Finding Hairpin
