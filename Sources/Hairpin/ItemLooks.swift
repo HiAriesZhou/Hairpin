@@ -5,8 +5,8 @@ import HairpinCore
 /// it was shown (a hidden item isn't drawn), else its app's own icon, else a
 /// monochrome placeholder: the app's initial in a rounded square. (macOS 26
 /// offers no other app's status item image, and an item kept behind the
-/// notch is never drawn to be captured.) Apple's items all belong to one app,
-/// so its icon wouldn't tell them apart; they keep the initial.
+/// notch is never drawn to be captured.) Apple's items mostly belong to
+/// Control Center, whose icon wouldn't tell them apart; they keep the initial.
 ///
 /// Looks are keyed by the item's status window rather than its id, which is
 /// its place among its app's items and shifts when the app adds or drops
@@ -26,8 +26,6 @@ final class ItemLooks {
     /// How often a look that comes out empty is tried again.
     private static let retries = 2
     private static let placeholderSide: CGFloat = 18
-    /// Apps whose many items an app icon wouldn't tell apart.
-    private static let systemItemOwners: Set<String> = ["com.apple.controlcenter", "com.apple.systemuiserver"]
 
     private var captured: [Fingerprint: NSImage] = [:]
     private var attempted: Set<Fingerprint> = []
@@ -44,11 +42,15 @@ final class ItemLooks {
 
     func image(for entry: ClassifiedItem) -> NSImage? {
         if let image = captured[Self.fingerprint(of: entry)] { return image }
-        if placeholders[entry.item.pid] == nil {
-            placeholders[entry.item.pid] = Self.appIcon(pid: entry.item.pid)
-                ?? Self.placeholder(for: entry.item.appName)
+        if let image = placeholders[entry.item.pid] { return image }
+        // An app still launching may not report its icon yet: its initial
+        // stands in, uncached, until it does.
+        guard let app = NSRunningApplication(processIdentifier: entry.item.pid) else {
+            return Self.placeholder(for: entry.item.appName)
         }
-        return placeholders[entry.item.pid]
+        let image = Self.appIcon(of: app) ?? Self.placeholder(for: entry.item.appName)
+        placeholders[entry.item.pid] = image
+        return image
     }
 
     /// Forgets the looks of items whose windows are gone, and the placeholders
@@ -109,9 +111,8 @@ final class ItemLooks {
 
     /// The app's own icon at the placeholder's size, if its bundle has one;
     /// the generic icon macOS draws otherwise says nothing about the item.
-    private static func appIcon(pid: pid_t) -> NSImage? {
-        guard let app = NSRunningApplication(processIdentifier: pid),
-              !systemItemOwners.contains(app.bundleIdentifier ?? ""),
+    private static func appIcon(of app: NSRunningApplication) -> NSImage? {
+        guard app.bundleIdentifier?.hasPrefix("com.apple.") != true,
               let bundle = app.bundleURL.flatMap(Bundle.init(url:)),
               bundle.object(forInfoDictionaryKey: "CFBundleIconFile") != nil
                 || bundle.object(forInfoDictionaryKey: "CFBundleIconName") != nil,
