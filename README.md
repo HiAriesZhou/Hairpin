@@ -40,7 +40,7 @@ Requires macOS 13 or later on Apple silicon. Real icon looks need macOS 14; the 
 ### Permissions and privacy
 
 - **Accessibility (required)** lets Hairpin read other apps' menu bar icons and click them for you. Turn it on in System Settings › Privacy & Security › Accessibility.
-- **Screen Recording (optional, macOS 14+)** lets Hairpin show icons as they look and tell exactly which app each belongs to. Without it, hidden icons show as the app's initial in a rounded square. Grant it from **Show Real Icons…** in Hairpin's menu.
+- **Screen Recording (optional, macOS 14+)** lets Hairpin show icons as they look and tell exactly which app each belongs to. Without it, and for icons that have never been visible, the row shows the app's own icon instead (Apple's icons show an initial in a rounded square). Grant it from **Show Real Icons…** in Hairpin's menu.
 
 Hairpin makes no network connections, doesn't log keystrokes and doesn't read app windows. With Screen Recording it captures only the menu bar strip, to cut out icon shapes, and reads menu bar item windows' names; the shapes stay in memory.
 

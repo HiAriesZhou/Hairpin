@@ -37,7 +37,7 @@ Note: the bundle ID changed from `com.hiarieszhou.notchbar` (NotchBar builds) to
 
 Start without it (`tccutil reset ScreenCapture com.hiarieszhou.hairpin`).
 
-- [ ] Without it, the row shows each app's initial in a rounded square, crisp and monochrome; nothing else is missing.
+- [ ] Without it, the row shows each app's own icon in color; Apple's items (Control Center) and apps without an icon show the initial in a rounded square, crisp and monochrome. Nothing else is missing.
 - [ ] The first time the row opens with icons hidden, macOS asks for Screen Recording. "Show Real Icons…" in the menu asks too (or opens the Screen Recording pane once macOS won't ask again).
 - [ ] After granting it (relaunch if macOS asks), icons that were shown at the time show in the row as they look in the menu bar: monochrome, crisp, in the row's light or dark look. None is a noisy block or a blank.
 - [ ] The recording indicator shows at most briefly, when new icons appear; not on every opening of the row.

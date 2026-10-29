@@ -19,7 +19,7 @@ The pin sits at the left end of the shown items. It goes in the first free slot 
 
 ## Showing items
 
-With Screen Recording (macOS 14 or later), Hairpin captures the menu bar strip once while an item is shown: one ScreenCaptureKit shot as is, one without the menu bar's windows. The difference between the two is the item's shape, kept as a template image so it takes the row's light or dark look. A hidden item isn't drawn, so it shows as it last looked; an item never seen shows its app's initial in a rounded square. Captures are keyed by the item's status window, tried once with a couple of retries, and kept only in memory. ScreenCaptureKit can turn on the recording indicator, which is why captures are rare.
+With Screen Recording (macOS 14 or later), Hairpin captures the menu bar strip once while an item is shown: one ScreenCaptureKit shot as is, one without the menu bar's windows. The difference between the two is the item's shape, kept as a template image so it takes the row's light or dark look. A hidden item isn't drawn, so it shows as it last looked; an item never seen (or any item, without Screen Recording) shows its app's own icon, or, for Apple's items and apps without an icon, the app's initial in a rounded square. Captures are keyed by the item's status window, tried once with a couple of retries, and kept only in memory. ScreenCaptureKit can turn on the recording indicator, which is why captures are rare.
 
 The row orders items the way the menu bar adds them: Apple's on the right, the others by launch, the earliest rightmost.
 
