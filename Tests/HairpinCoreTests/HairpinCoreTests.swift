@@ -627,3 +627,154 @@ final class StackPlacementTests: XCTestCase {
         XCTAssertEqual(sorted.map(\.judgedWindowID), [3, 1])
     }
 }
+
+/// Recorded on macOS 26 with an external display: the built-in row keeps its
+/// overflowed item (Howler) at its left end, while the external row has it
+/// second from the left, so the two rows don't line up by position.
+final class WindowOwnerTests: XCTestCase {
+    private func bar(_ id: UInt32, x: CGFloat, width: CGFloat = 30, onscreen: Bool = true) -> StatusWindow {
+        StatusWindow(id: id, frame: CGRect(x: x, y: 0, width: width, height: 33), isOnscreen: onscreen)
+    }
+    private func outer(_ id: UInt32, x: CGFloat, width: CGFloat = 30, parked: Bool = true) -> StatusWindow {
+        StatusWindow(id: id, frame: CGRect(x: x, y: parked ? -1142 : -1080, width: width, height: parked ? 30 : 33),
+                     isOnscreen: !parked)
+    }
+    /// Howler 51/49, Hairpin 57/56, ChatGPT 44/80, the clock 99/98.
+    private func windows(externalParked parked: Bool = true) -> [StatusWindow] {
+        [bar(51, x: 870, onscreen: false), bar(57, x: 900), bar(44, x: 930), bar(99, x: 960, width: 159),
+         outer(56, x: 1300, parked: parked), outer(49, x: 1330, parked: parked),
+         outer(80, x: 1360, parked: parked), outer(98, x: 1390, width: 159, parked: parked)]
+    }
+    private let screens = [builtIn, external]
+    private let howlerOnExternal = ExtraItem(id: "howler", pid: 1, appName: "Howler",
+                                             frame: CGRect(x: 1333, y: -1139, width: 24, height: 24))
+    private let howlerOnBuiltIn = ExtraItem(id: "howler", pid: 1, appName: "Howler",
+                                            frame: CGRect(x: 873, y: 4.5, width: 24, height: 24))
+    private let chatGPTOnExternal = ExtraItem(id: "chatgpt", pid: 2, appName: "ChatGPT",
+                                              frame: CGRect(x: 1363, y: -1139, width: 24, height: 24))
+
+    func testEachItemOwnsTheWindowsItsReportedOn() {
+        let layout = MenuBarLayout(windows: windows(), screens: screens)
+        let owners = layout.windowOwners(for: [howlerOnBuiltIn, chatGPTOnExternal],
+                                         keeping: [49: "howler", 80: "chatgpt", 44: "chatgpt", 12: "gone"])
+        // Claims in rows where an item isn't reported now stand; the window
+        // that's gone is dropped.
+        XCTAssertEqual(owners, [49: "howler", 51: "howler", 80: "chatgpt", 44: "chatgpt"])
+    }
+
+    func testAnOwnedWindowJudgesAnItemReportedInAnotherRow() {
+        let layout = MenuBarLayout(windows: windows(), screens: screens)
+        let sorted = ExtraList.classifyAndSort([howlerOnExternal, chatGPTOnExternal], screens: screens,
+                                               appMenus: nil, layout: layout, owners: [51: "howler", 49: "howler"])
+        XCTAssertEqual(sorted.map(\.id), ["howler", "chatgpt"])
+        XCTAssertEqual(sorted.map(\.judgedWindowID), [51, 44])
+        XCTAssertEqual(sorted.map(\.visibility), [.hiddenByNotch, .visible])
+    }
+
+    func testCopiesThatSwappedRowsAreStillFound() {
+        // macOS can hand an item's copies to the other menu bar: what was
+        // Howler's external window is now its built-in one.
+        var swapped = windows()
+        swapped[0].id = 49
+        swapped[5].id = 51
+        let layout = MenuBarLayout(windows: swapped, screens: screens)
+        let sorted = ExtraList.classifyAndSort([howlerOnExternal], screens: screens, appMenus: nil, layout: layout,
+                                               owners: [51: "howler", 49: "howler"])
+        XCTAssertEqual(sorted.first?.judgedWindowID, 49)
+    }
+
+    func testAHiddenItemIsDrawnByItsOwnCopyInTheOtherRow() {
+        let layout = MenuBarLayout(windows: windows(externalParked: false), screens: screens)
+        var howler = howlerOnExternal
+        howler.frame = CGRect(x: 1333, y: -1076, width: 24, height: 24)
+        let sorted = ExtraList.classifyAndSort([howler], screens: screens, appMenus: nil, layout: layout,
+                                               owners: [51: "howler"])
+        XCTAssertEqual(sorted.first?.windowID, 49)
+    }
+
+    func testWithoutOwnersItemsFallBackToTheirPlace() {
+        let layout = MenuBarLayout(windows: windows(), screens: screens)
+        let sorted = ExtraList.classifyAndSort([chatGPTOnExternal], screens: screens, appMenus: nil, layout: layout)
+        XCTAssertEqual(sorted.first?.judgedWindowID, 44)
+    }
+
+    func testWithoutOurWindowsTheRowsLineUpAgain() {
+        // Our icon sits right of the hidden items in the notched row but
+        // left of them elsewhere; left out, the rest line up by place.
+        let layout = MenuBarLayout(windows: windows().filter { ![56, 57].contains($0.id) }, screens: screens)
+        let sorted = ExtraList.classifyAndSort([howlerOnExternal, chatGPTOnExternal], screens: screens,
+                                               appMenus: nil, layout: layout)
+        XCTAssertEqual(sorted.map(\.judgedWindowID), [51, 44])
+    }
+
+    func testOwnIconFoundByItsWindows() {
+        let layout = MenuBarLayout(windows: windows(), screens: screens)
+        let own = CGRect(x: 1300, y: -1142, width: 30, height: 30)
+        XCTAssertEqual(layout.placement(width: 20, screen: 0, appMenus: nil, own: own, ownWindows: [56, 57],
+                                        coverable: [44]),
+                       .ownIcon(bar(57, x: 900)))
+    }
+
+    func testOwnIconHiddenByItsWindowsGetsAPin() {
+        // Hairpin's icon overflowed, though its frame lands on the shown item.
+        let layout = MenuBarLayout(windows: windows(), screens: screens)
+        XCTAssertEqual(layout.placement(width: 20, screen: 0, appMenus: nil, own: CGRect(x: 903, y: 4, width: 24, height: 24),
+                                        ownWindows: [51], coverable: [44]),
+                       .slot(rightEdge: 898))
+    }
+
+    func testOwnIconWithoutKnownWindowsFallsBackToItsPlace() {
+        let layout = MenuBarLayout(windows: windows(), screens: screens)
+        let own = CGRect(x: 1300, y: -1142, width: 30, height: 30)
+        XCTAssertEqual(layout.placement(width: 20, screen: 0, appMenus: nil, own: own, ownWindows: [12],
+                                        coverable: [44]),
+                       .slot(rightEdge: 898))
+    }
+
+    func testWindowsThatGrewAreOurs() {
+        let before = windows()
+        var after = before
+        after[1].frame.size.width += 2   // 57, built-in
+        after[1].frame.origin.x -= 2
+        after[0].frame.origin.x -= 2     // pushed left, same width
+        after[4].frame.size.width += 2   // 56, external
+        XCTAssertEqual(MenuBarLayout.grownWindows(from: before, to: after, by: 2, screens: screens), [56, 57])
+    }
+
+    func testAnotherItemGrowingSpoilsTheProbe() {
+        // A network meter widening at the same moment leaves two candidates
+        // in a row; nothing is taken for ours.
+        let before = windows()
+        var after = before
+        after[1].frame.size.width += 2
+        after[4].frame.size.width += 2
+        after[2].frame.size.width += 2
+        XCTAssertEqual(MenuBarLayout.grownWindows(from: before, to: after, by: 2, screens: screens), [])
+    }
+
+    func testAProbeMissingARowFindsNothing() {
+        // Only one copy grew (its other menu bar didn't relayout yet): a
+        // partial answer would misalign the rows, so there's none.
+        let before = windows()
+        var after = before
+        after[4].frame.size.width += 2
+        XCTAssertEqual(MenuBarLayout.grownWindows(from: before, to: after, by: 2, screens: screens), [])
+    }
+
+    func testWindowsGrowingByOtherAmountsArentOurs() {
+        let before = windows()
+        var after = before
+        after[1].frame.size.width += 2
+        after[4].frame.size.width += 9
+        XCTAssertEqual(MenuBarLayout.grownWindows(from: before, to: after, by: 2, screens: screens), [])
+    }
+
+    func testAnItemSeenOnANewWindowDropsItsOldClaims() {
+        // An app dropped its first item, so its item ids shifted: "p-0" is now
+        // reported on what was "p-1"'s window. Neither id's old claims hold.
+        let layout = MenuBarLayout(windows: windows(), screens: screens)
+        let shifted = ExtraItem(id: "p-0", pid: 3, appName: "P", frame: CGRect(x: 1333, y: -1139, width: 24, height: 24))
+        let owners = layout.windowOwners(for: [shifted], keeping: [56: "p-0", 57: "p-0", 49: "p-1", 51: "p-1"])
+        XCTAssertEqual(owners, [49: "p-0"])
+    }
+}

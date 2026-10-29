@@ -100,10 +100,13 @@ public enum ExtraList {
                         layout: windows.map { MenuBarLayout(windows: $0, screens: screens) })
     }
 
-    /// The same, with the window list already laid out in rows.
+    /// The same, with the window list already laid out in rows, and the
+    /// items that own each window (see `MenuBarLayout.windowOwners`).
     public static func classifyAndSort(_ items: [ExtraItem], screens: [ScreenInfo], appMenus: CGRect?,
-                                       layout: MenuBarLayout?) -> [ClassifiedItem] {
+                                       layout: MenuBarLayout?,
+                                       owners: [UInt32: String] = [:]) -> [ClassifiedItem] {
         let target = MenuBarLayout.targetScreen(in: screens)
+        let owned = Dictionary(grouping: owners.keys) { owners[$0]! }.mapValues(Set.init)
         let named = layout?.windowsByName(for: items, preferring: target) ?? [:]
         let claimed = Set(named.values.map(\.id))
         return items
@@ -113,13 +116,18 @@ public enum ExtraList {
                                                                                      appMenus: appMenus))
                 }
                 guard frame.width > 0, frame.height > 0 else { return nil }
-                let copies = layout.copies(of: named[item.id]?.frame ?? frame)
-                guard let judged = copies[target] ?? copies.values.first else { return nil }
+                let reportedAt = named[item.id]?.frame ?? frame
+                let copies = layout.copies(of: reportedAt)
+                guard let judged = layout.window(reportedAt: reportedAt, owned: owned[item.id] ?? [],
+                                                 screen: target) ?? copies.values.first else { return nil }
                 // A window named for one app isn't another item's, wherever its frame says.
                 if named[item.id] == nil, claimed.contains(judged.id) { return nil }
                 let visibility = Geometry.visibility(of: judged.frame, screens: screens, appMenus: appMenus,
                                                      window: judged)
-                let drawn = judged.isOnscreen ? judged : copies.values.first(where: \.isOnscreen) ?? judged
+                // Where it's reported, the window is surely its own.
+                let reported = layout.reportedWindow(of: reportedAt)?.window
+                let drawn = judged.isOnscreen ? judged
+                    : reported.flatMap { $0.isOnscreen ? $0 : nil } ?? copies.values.first(where: \.isOnscreen) ?? judged
                 return ClassifiedItem(item: item, visibility: visibility, windowID: drawn.id,
                                       judgedWindowID: judged.id, frame: judged.frame)
             }

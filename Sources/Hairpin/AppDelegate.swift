@@ -23,6 +23,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let looks = ItemLooks()
     /// Where the stack goes, from the latest scan.
     private var anchor: StackAnchor?
+    /// The item each status window belongs to, and our icon's windows: while
+    /// another menu bar is active, items are reported in that one, whose
+    /// order the notched one doesn't keep (see `MenuBarLayout.windowOwners`).
+    private var windowOwners: [UInt32: String] = [:]
+    private var ownWindows: Set<UInt32> = []
+    private var lastProbe = Date.distantPast
+    private var failedProbes = 0
     private var isScanning = false
     private var scanAgain = false
     /// The menu bar rows' windows as last seen, which a cheap poll compares
@@ -42,6 +49,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private static let menuBarWatchInterval: TimeInterval = 0.5
     /// The fewest seconds between Accessibility scans the watch starts.
     private static let watchScanInterval: TimeInterval = 2
+    /// How much wider our icon briefly gets to find its windows, for how
+    /// long, and the fewest seconds between two tries, doubling after each
+    /// that finds nothing, up to the longest.
+    private static let probeGrowth: CGFloat = 2
+    private static let probeDuration: Duration = .milliseconds(250)
+    private static let probeInterval: TimeInterval = 5
+    private static let longestProbeInterval: TimeInterval = 300
     private static let openOnHoverKey = "OpenOnHover"
     /// The macOS 13+ Privacy & Security pane first, the legacy pane id second.
     private static let accessibilitySettingsURLs = [
@@ -166,7 +180,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func finish(_ scan: MenuBarExtras.Scan) {
         isScanning = false
         lastScan = scan
-        apply(scan)
+        apply(scan, remembering: true)
         if scanAgain {
             scanAgain = false
             refresh()
@@ -174,25 +188,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     /// Works out what's hidden and where the pin goes from a scan's items and
-    /// window list, then redraws.
-    private func apply(_ scan: MenuBarExtras.Scan) {
+    /// window list, then redraws. Windows' owners are learned only from a
+    /// fresh scan; a replay's item frames predate its windows.
+    private func apply(_ scan: MenuBarExtras.Scan, remembering: Bool = false) {
         let ownBundleID = Bundle.main.bundleIdentifier.map { Set([$0]) } ?? []
         let items = ExtraList.filter(scan.extras.map(\.item),
                                      excludingPIDs: [ProcessInfo.processInfo.processIdentifier],
                                      excludingBundleIDs: ownBundleID)
         let screens = Screens.current()
         let layout = scan.windows.isEmpty ? nil : MenuBarLayout(windows: scan.windows, screens: screens)
-        let sorted = ExtraList.classifyAndSort(items, screens: screens, appMenus: scan.appMenus, layout: layout)
-        logScan(items: items, sorted: sorted, windows: scan.windows)
-        kept = sorted
-        windowStates = layout.map(WindowState.of) ?? []
         let ownFrame = (statusItem.button?.window?.frame).map { frame in
             Geometry.quartzRect(fromCocoa: frame, primaryScreenHeight: NSScreen.screens.first?.frame.height ?? 0)
         }
+        if let layout {
+            ownWindows = ownWindows.intersection(scan.windows.map(\.id))
+            let target = MenuBarLayout.targetScreen(in: screens)
+            if !layout.row(target).contains(where: { ownWindows.contains($0.id) }) { probeOwnWindows() }
+        }
+        // Other items are matched without our windows: our icon sits right of
+        // the hidden items in the notched menu bar but left of them in the
+        // others, and left out, the rows line up.
+        let itemLayout = layout.map { _ in
+            MenuBarLayout(windows: scan.windows.filter { !ownWindows.contains($0.id) }, screens: screens)
+        }
+        if remembering, let itemLayout {
+            windowOwners = itemLayout.windowOwners(for: items, keeping: windowOwners)
+        }
+        let sorted = ExtraList.classifyAndSort(items, screens: screens, appMenus: scan.appMenus, layout: itemLayout,
+                                               owners: windowOwners)
+        logScan(items: items, sorted: sorted, windows: scan.windows)
+        kept = sorted
+        windowStates = layout.map(WindowState.of) ?? []
         let shown = sorted.filter { !$0.visibility.isHidden }
         anchor = layout.flatMap { layout in
             Screens.stackAnchor(layout: layout, screens: screens, appMenus: scan.appMenus, own: ownFrame,
-                                coverable: Set(shown.compactMap(\.judgedWindowID)))
+                                ownWindows: ownWindows, coverable: Set(shown.compactMap(\.judgedWindowID)))
         }
         // The item under the pin, if it had to sit on one, is kept with the hidden ones.
         let covered = anchor?.covered.flatMap { window in shown.first { $0.judgedWindowID == window } }
@@ -211,6 +241,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                      pids: Set(NSWorkspace.shared.runningApplications.map(\.processIdentifier)))
         updateStack()
         looks.capture(from: sorted) { [weak self] in self?.updateStack() }
+    }
+
+    /// Finds our icon's windows, its copy in every menu bar: once a menu bar
+    /// overflows, nothing else tells them from another app's. The icon gets a
+    /// little wider for a moment, and the windows that grew are ours. It sits
+    /// at the left end, mostly beside hidden items, so the nudge goes unseen;
+    /// it's done only while our windows aren't known (at launch, and after
+    /// macOS makes new ones).
+    private func probeOwnWindows() {
+        let wait = min(Self.probeInterval * pow(2, Double(failedProbes)), Self.longestProbeInterval)
+        guard Date().timeIntervalSince(lastProbe) >= wait,
+              let width = statusItem.button?.frame.width, width > 0 else { return }
+        lastProbe = Date()
+        let before = MenuBarExtras.statusWindows()
+        statusItem.length = width + Self.probeGrowth
+        Task {
+            try? await Task.sleep(for: Self.probeDuration)
+            let after = MenuBarExtras.statusWindows()
+            self.statusItem.length = NSStatusItem.squareLength
+            let grown = MenuBarLayout.grownWindows(from: before, to: after, by: Self.probeGrowth,
+                                                   screens: Screens.current())
+            log.debug("own windows: \(grown.sorted().map(String.init).joined(separator: ","), privacy: .public)")
+            guard !grown.isEmpty else {
+                self.failedProbes += 1
+                return
+            }
+            self.failedProbes = 0
+            self.ownWindows = grown
+            if let scan = self.lastScan, !self.isScanning {
+                self.apply(MenuBarExtras.Scan(extras: scan.extras, appMenus: scan.appMenus,
+                                              windows: MenuBarExtras.statusWindows()))
+            }
+        }
     }
 
     /// Debug-level only: `log stream --level debug --predicate 'subsystem == "com.hiarieszhou.hairpin"'`.
