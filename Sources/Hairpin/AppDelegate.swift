@@ -375,11 +375,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.removeAllItems()
 
         if !MenuBarExtras.isTrusted {
-            menu.addItem(action("Grant Accessibility…", #selector(grantAccessibility), symbol: "lock.shield"))
+            menu.addItem(action("Grant Accessibility…", #selector(grantAccessibility)))
         } else {
             menu.addItem(header(Self.status(hiddenCount: hidden?.count)))
             if #available(macOS 14, *), !IconCapture.isAvailable {
-                menu.addItem(action("Show Real Icons…", #selector(grantScreenCapture), symbol: "eye"))
+                menu.addItem(action("Show Real Icons…", #selector(grantScreenCapture)))
             }
         }
 
@@ -413,10 +413,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    private func action(_ title: String, _ selector: Selector, symbol: String? = nil) -> NSMenuItem {
+    /// No images: macOS 26 indents a menu section's titles past an image
+    /// column when any of its items has one, so the sections wouldn't line up.
+    private func action(_ title: String, _ selector: Selector) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: selector, keyEquivalent: "")
         item.target = self
-        item.image = symbol.flatMap { NSImage(systemSymbolName: $0, accessibilityDescription: nil) }
         return item
     }
 
