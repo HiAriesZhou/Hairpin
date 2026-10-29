@@ -220,7 +220,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         kept = sorted
         windowStates = layout.map(WindowState.of) ?? []
         let shown = sorted.filter { !$0.visibility.isHidden }
-        anchor = layout.flatMap { layout in
+        // With nothing hidden there's no pin; it mustn't cover an item and so
+        // hide one itself.
+        anchor = shown.count == sorted.count ? nil : layout.flatMap { layout in
             Screens.stackAnchor(layout: layout, screens: screens, appMenus: scan.appMenus, own: ownFrame,
                                 ownWindows: ownWindows, coverable: Set(shown.compactMap(\.judgedWindowID)))
         }

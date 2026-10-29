@@ -588,6 +588,17 @@ final class StackPlacementTests: XCTestCase {
                        .covering(known))
     }
 
+    func testWithNoRoomOurShownIconHoldsTheItemsRatherThanCoverOne() {
+        // Howler, relaunched, went left of Hairpin's icon, leaving too little
+        // room beside the notch: covering Howler would show a pin beside ours.
+        let howler = shown(1, x: 860), own = shown(2, x: 890)
+        let layout = MenuBarLayout(windows: [shown(3, x: 1200), own, howler], screens: [builtIn])
+        let menusToTheNotch = CGRect(x: 0, y: 0, width: 650, height: 24)
+        XCTAssertEqual(layout.placement(width: 20, screen: 0, appMenus: menusToTheNotch, own: nil, ownWindows: [2],
+                                        coverable: [1, 3]),
+                       .ownIcon(own))
+    }
+
     func testNoPinWithNothingToCover() {
         let layout = MenuBarLayout(windows: [shown(1, x: 935, width: 24)], screens: [builtIn])
         let longMenus = CGRect(x: 0, y: 0, width: 930, height: 24)
