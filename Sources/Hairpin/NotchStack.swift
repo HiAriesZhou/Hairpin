@@ -11,8 +11,8 @@ struct StackEntry: Equatable {
 /// screen's menu bar strip (Cocoa coordinates).
 struct StackAnchor: Equatable {
     enum Place: Equatable {
-        /// Hairpin's own icon is the leftmost shown item and holds them; its
-        /// copy in this menu bar is at `frame`.
+        /// Hairpin's own icon is visible and holds the hidden items; its copy
+        /// in this menu bar is at `frame`.
         case button(frame: NSRect)
         /// The pin spanning this part of the menu bar.
         case slot(minX: CGFloat, width: CGFloat)
@@ -28,7 +28,7 @@ struct StackAnchor: Equatable {
 /// Hairpin's pin at the left end of the shown menu bar items, where the
 /// hidden ones overflowed. Resting the pointer on it drops the items down in
 /// a row below it; clicking one opens it. With nothing hidden, the pin isn't
-/// there. While Hairpin's own icon is the leftmost item, it holds them itself.
+/// there. While Hairpin's own icon is visible, it holds them itself.
 ///
 /// It opens on a click, and on hover unless `opensOnHover` is off. Opened by
 /// hovering, the row closes when the pointer leaves; opened by a click, or
@@ -92,7 +92,7 @@ final class NotchStack: NSObject {
         return frame
     }
 
-    /// Hairpin's own icon, which opens the items while it's the leftmost one.
+    /// Hairpin's own icon, which opens the items while it holds them.
     func attach(to button: NSStatusBarButton) {
         self.button = button
         button.addTrackingArea(NSTrackingArea(rect: .zero,
