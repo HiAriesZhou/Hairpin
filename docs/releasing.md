@@ -15,7 +15,7 @@ The website's download button and the README link to `releases/latest/download/H
 
 ## Secrets
 
-They're repository secrets (Settings › Secrets and variables › Actions), the same five as Howler's; GitHub doesn't share secrets between a personal account's repositories, so each repository holds its own copy. Only the `release` job reads them; the `build` job and pull requests from forks never get them.
+Configure these five repository secrets in Settings › Secrets and variables › Actions. Only the `release` job reads them; the `build` job and pull requests from forks never get them.
 
 | Secret | What it is |
 |---|---|

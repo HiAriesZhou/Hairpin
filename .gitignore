@@ -7,3 +7,7 @@ Hairpin.app/
 Hairpin.zip
 .DS_Store
 Hairpin.dmg
+
+# Local task notes and process records are not project documentation.
+.local/
+/docs/HANDOFF.md
