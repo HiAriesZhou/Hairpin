@@ -402,7 +402,7 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
         <p class="eyebrow" data-i18n="privEyebrow">Permissions and privacy</p>
         <h2 class="band-title" style="font-size:var(--step-3);line-height:1.08;font-style:italic" data-i18n="privTitle">It reads the menu bar, and nothing else.</h2>
         <p class="first" data-i18n="priv1">Hairpin makes no network connections, doesn't log keystrokes and doesn't read app windows.</p>
-        <p data-i18n="priv2">Accessibility lets it read other apps' menu bar icons and click them for you. Screen Recording is optional: with it, Hairpin captures only the menu bar strip to cut out icon shapes and reads the names of menu bar item windows; the shapes stay in memory. Without it, hidden icons show as the app's initial in a rounded square.</p>
+        <p data-i18n="priv2">Accessibility lets it read other apps' menu bar icons and click them for you. Screen Recording is optional: with it, Hairpin captures only the menu bar strip to cut out icon shapes and reads the names of menu bar item windows; the shapes stay in memory. Without it, or for icons never shown, the row uses the app's own icon. Apple's items and apps without an icon show an initial in a rounded square.</p>
       </div>
       <div class="tag" role="group" aria-label="Permissions summary" data-i18n-aria="aTag">
         <span class="hole" aria-hidden="true"></span>
@@ -512,7 +512,7 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
       t4: "Looks right", t4d: "Icons keep their menu bar order. With Screen Recording they look just as they do in the menu bar, in a Liquid Glass row on macOS 26.",
       privEyebrow: "Permissions and privacy", privTitle: "It reads the menu bar, and nothing else.",
       priv1: "Hairpin makes no network connections, doesn't log keystrokes and doesn't read app windows.",
-      priv2: "Accessibility lets it read other apps' menu bar icons and click them for you. Screen Recording is optional: with it, Hairpin captures only the menu bar strip to cut out icon shapes and reads the names of menu bar item windows; the shapes stay in memory. Without it, hidden icons show as the app's initial in a rounded square.",
+      priv2: "Accessibility lets it read other apps' menu bar icons and click them for you. Screen Recording is optional: with it, Hairpin captures only the menu bar strip to cut out icon shapes and reads the names of menu bar item windows; the shapes stay in memory. Without it, or for icons never shown, the row uses the app's own icon. Apple's items and apps without an icon show an initial in a rounded square.",
       tagTitle: "Hairpin · Care label", pA: "Accessibility", vReq: "Required", pAn: "Reads and clicks menu bar icons",
       pS: "Screen Recording", vOpt: "Optional", pSn: "macOS 14+, menu bar strip only", pN: "Network", vNone: "None",
       pK: "Keystrokes", vNoLog: "Never logged", vNever: "Never read", pW: "App window contents",
@@ -550,7 +550,7 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
       t4: "样子一致", t4d: "图标保持菜单栏里的顺序。授予屏幕录制后，样子和菜单栏上一致；在 macOS 26 上用 Liquid Glass 效果。",
       privEyebrow: "权限与隐私", privTitle: "只读菜单栏，别的都不碰。",
       priv1: "Hairpin 不联网，不记录按键，也不读取应用窗口的内容。",
-      priv2: "辅助功能权限用来读取其他应用的菜单栏图标，并替你点击。屏幕录制是可选的：授权后，Hairpin 只截取菜单栏这一条来抠出图标形状，并读取菜单栏图标窗口的名称，形状只保存在内存里；不授权时，被藏起来的图标显示为圆角方框里的应用首字母。",
+      priv2: "辅助功能权限用来读取其他应用的菜单栏图标，并替你点击。屏幕录制是可选的：授权后，Hairpin 只截取菜单栏这一条来抠出图标形状，并读取菜单栏图标窗口的名称，形状只保存在内存里。不授权时，或图标从未显示过时，会使用应用自身的图标；Apple 的项目或没有应用图标的项目显示为圆角方框里的首字母。",
       tagTitle: "Hairpin · 洗标", pA: "辅助功能", vReq: "必需", pAn: "读取并点击菜单栏图标",
       pS: "屏幕录制", vOpt: "可选", pSn: "macOS 14+，只截菜单栏", pN: "网络", vNone: "不联网",
       pK: "按键", vNoLog: "不记录", vNever: "从不读取", pW: "应用窗口内容",
