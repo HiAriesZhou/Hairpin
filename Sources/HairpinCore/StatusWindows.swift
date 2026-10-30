@@ -25,10 +25,9 @@ public struct StatusWindow: Equatable, Sendable {
 
 /// The status windows of every menu bar, one row per screen.
 ///
-/// Every screen's menu bar shows the same items in the same order, laid out
-/// from its right edge, so the nth window from the right is the same item on
-/// every screen. Accessibility reports an item's frame on whichever screen it
-/// likes; the rows find that item's copy on the others.
+/// Accessibility can report an item's frame in any screen's menu bar. Rows
+/// can order their items differently, so known window ownership takes priority
+/// when finding an item's copy; place and width provide a fallback.
 public struct MenuBarLayout {
     /// Taller windows at the status level aren't menu bar items.
     static let maximumItemHeight: CGFloat = 50
@@ -160,13 +159,18 @@ public struct MenuBarLayout {
     /// it had there, or on a window another item had, is taken to be a new
     /// item under an old id (ids are places among an app's items, which shift)
     /// or one Accessibility caught mid-move: both items' claims are dropped.
+    /// Name matches take priority over stale Accessibility positions, and an
+    /// unnamed item cannot claim a window named for another item.
     public func windowOwners(for items: [ExtraItem], keeping old: [UInt32: String]) -> [UInt32: String] {
         let present = Set(allRows.map(\.id))
+        let named = windowsByName(for: items, preferring: Self.targetScreen(in: screens))
+        let claimed = Set(named.values.map(\.id))
         var result = old.filter { present.contains($0.key) }
         for item in items {
-            guard let frame = item.frame, frame.width > 0, frame.height > 0,
+            guard let frame = named[item.id]?.frame ?? item.frame, frame.width > 0, frame.height > 0,
                   let reported = reportedWindow(of: frame) else { continue }
             let window = reported.window.id
+            if named[item.id] == nil, claimed.contains(window) { continue }
             let sameRow = Set(row(reported.screen).map(\.id))
             let movedInRow = result.contains { $0.value == item.id && sameRow.contains($0.key) && $0.key != window }
             let stale = [movedInRow ? item.id : nil, result[window].flatMap { $0 == item.id ? nil : $0 }]
@@ -248,8 +252,8 @@ public struct MenuBarLayout {
 
 /// Where the pin holding the hidden items goes; see `MenuBarLayout.placement`.
 public enum StackPlacement: Equatable, Sendable {
-    /// Hairpin's own icon, in this window, is the leftmost shown item and
-    /// holds them.
+    /// Hairpin's own icon is visible in this window and holds the hidden items,
+    /// wherever it sits among the shown items.
     case ownIcon(StatusWindow)
     /// A free slot ending at this x (Quartz).
     case slot(rightEdge: CGFloat)

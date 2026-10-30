@@ -108,7 +108,14 @@ public enum ExtraList {
         let target = MenuBarLayout.targetScreen(in: screens)
         let owned = Dictionary(grouping: owners.keys) { owners[$0]! }.mapValues(Set.init)
         let named = layout?.windowsByName(for: items, preferring: target) ?? [:]
-        let claimed = Set(named.values.map(\.id))
+        var claimed = Set(named.values.map(\.id))
+        // Names may come from another display. Reserve the window used for
+        // classification too, so a stale position cannot claim its copy.
+        for (id, window) in named {
+            if let judged = layout?.window(reportedAt: window.frame, owned: owned[id] ?? [], screen: target) {
+                claimed.insert(judged.id)
+            }
+        }
         return items
             .compactMap { item -> ClassifiedItem? in
                 guard let layout, let frame = item.frame else {

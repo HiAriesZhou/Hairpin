@@ -430,6 +430,67 @@ final class WindowNameTests: XCTestCase {
 }
 
 final class ActiveRowNameTests: XCTestCase {
+    func testNamedWindowsTakePriorityOverStaleOwnershipCoordinates() {
+        for width: CGFloat in [24, 38] {
+            let windows = [
+                StatusWindow(id: 1, frame: CGRect(x: 1400, y: 0, width: width, height: 33), isOnscreen: true,
+                             name: "Item-0"),
+                StatusWindow(id: 2, frame: CGRect(x: 1376, y: 0, width: 24, height: 33), isOnscreen: false,
+                             name: "Item-0"),
+                StatusWindow(id: 11, frame: CGRect(x: 1634, y: -1080, width: width, height: 33), isOnscreen: true,
+                             name: "com.example.named"),
+                StatusWindow(id: 12, frame: CGRect(x: 1610, y: -1080, width: 24, height: 33), isOnscreen: true,
+                             name: "Item-0"),
+            ]
+            let unnamed = ExtraItem(id: "unnamed", pid: 2, appName: "Unnamed", bundleID: "com.example.unnamed",
+                                    frame: CGRect(x: 1376, y: 4, width: 20, height: 24))
+            let named = ExtraItem(id: "named", pid: 1, appName: "Named", bundleID: "com.example.named",
+                                  frame: CGRect(x: 1376, y: 4, width: width, height: 24))
+            let layout = MenuBarLayout(windows: windows, screens: [builtIn, external])
+            // Learning from the named item's stale position would steal the
+            // unnamed item's window, even when both have the same width.
+            for items in [[unnamed, named], [named, unnamed]] {
+                let owners = layout.windowOwners(for: items, keeping: [:])
+                XCTAssertEqual(owners[2], "unnamed")
+                XCTAssertEqual(owners[11], "named")
+                let sorted = ExtraList.classifyAndSort(items, screens: [builtIn, external], appMenus: nil,
+                                                       layout: layout, owners: owners)
+                XCTAssertEqual(sorted.map(\.id), ["unnamed", "named"])
+                XCTAssertEqual(sorted.map(\.judgedWindowID), [2, 1])
+                XCTAssertEqual(sorted.map(\.visibility), [.hiddenByNotch, .visible])
+            }
+        }
+    }
+
+    func testNamedWindowOnAnotherDisplayExcludesAStalePositionMatch() {
+        let windows = [
+            StatusWindow(id: 1, frame: CGRect(x: 1400, y: 0, width: 38, height: 33), isOnscreen: true, name: "Item-0"),
+            StatusWindow(id: 2, frame: CGRect(x: 1376, y: 0, width: 24, height: 33), isOnscreen: false, name: "Item-0"),
+            StatusWindow(id: 11, frame: CGRect(x: 1634, y: -1080, width: 38, height: 33), isOnscreen: true,
+                         name: "com.example.wide"),
+            StatusWindow(id: 12, frame: CGRect(x: 1610, y: -1080, width: 24, height: 33), isOnscreen: true,
+                         name: "com.example.narrow"),
+        ]
+        let wide = ExtraItem(id: "wide", pid: 1, appName: "Wide", bundleID: "com.example.wide",
+                             frame: CGRect(x: 1634, y: -1076, width: 38, height: 24))
+        let narrow = ExtraItem(id: "narrow", pid: 2, appName: "Narrow", bundleID: "com.example.narrow",
+                               frame: CGRect(x: 1610, y: -1076, width: 24, height: 24))
+        let stale = ExtraItem(id: "stale", pid: 9, appName: "Stale", bundleID: "com.example.stale",
+                              frame: CGRect(x: 1378, y: 4, width: 20, height: 24))
+        let layout = MenuBarLayout(windows: windows, screens: [builtIn, external])
+        // A fresh scan learns the stale item's claim too, as AppDelegate does.
+        // Named items must still reserve their copies in the target row.
+        for items in [[wide, narrow, stale], [stale, narrow, wide]] {
+            let owners = layout.windowOwners(for: items, keeping: [:])
+            let sorted = ExtraList.classifyAndSort(items, screens: [builtIn, external], appMenus: nil,
+                                                   layout: layout, owners: owners)
+            XCTAssertEqual(sorted.map(\.id), ["narrow", "wide"])
+            XCTAssertEqual(sorted.map(\.judgedWindowID), [2, 1])
+            XCTAssertEqual(sorted.map(\.windowID), [12, 1])
+            XCTAssertEqual(sorted.map(\.visibility), [.hiddenByNotch, .visible])
+        }
+    }
+
     func testNamesFromTheActiveMenuBarCarryToTheNotchedOne() {
         // Only the active menu bar (here the external one) names its windows
         // after apps; the built-in row has autosave names. flomo's stale frame
