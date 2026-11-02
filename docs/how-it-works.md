@@ -27,3 +27,25 @@ The row orders items the way the menu bar adds them: Apple's on the right, the o
 ## Opening an item
 
 Clicking an item in the row performs `AXPress` on the real one, or `AXShowMenu` if it doesn't support `AXPress`. The app opens its own menu, at the real item's position.
+
+## Updating the app
+
+`Updates` retains Sparkle's standard updater controller. Sparkle owns the daily
+schedule, persistent preferences, version comparison, signature verification,
+download and installation. Hairpin handles scheduled reminders through the
+gentle-reminder delegate: a dot inside the existing 18-point mark and a menu
+entry replace background alert windows. Primary click/hover behavior and pin
+width stay unchanged. Both the status item and separate pin expose the settings
+menu on secondary click; manual checks bring Sparkle's standard window forward.
+
+Automatic checks default on. Automatic downloads default off; enabling them
+also enables checks. Disabling checks disables future automatic downloads.
+An update already prepared by Sparkle may still install on quit. Preferences
+come from Sparkle's properties, not a second copy in Hairpin's defaults.
+
+The stable feed is the `appcast.xml` asset on the latest GitHub Release. Each
+item points to its own versioned DMG URL. Both feed and archive require an
+Ed25519 signature. Feed generation happens after app/DMG notarization; the
+pipeline verifies the signatures, versions, lengths and URLs with the bundled
+public key before publishing a complete draft. There are no delta updates.
+Network errors only affect updating; menu bar scanning remains local.

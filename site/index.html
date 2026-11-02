@@ -401,7 +401,8 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
       <div class="copy">
         <p class="eyebrow" data-i18n="privEyebrow">Permissions and privacy</p>
         <h2 class="band-title" style="font-size:var(--step-3);line-height:1.08;font-style:italic" data-i18n="privTitle">It reads the menu bar, and nothing else.</h2>
-        <p class="first" data-i18n="priv1">Hairpin makes no network connections, doesn't log keystrokes and doesn't read app windows.</p>
+        <p class="first" data-i18n="priv1">Hairpin connects only to check for and download updates. It never sends menu bar data, screenshots, app lists or analytics, and doesn't log keystrokes or read app windows.</p>
+        <p data-i18n="privUpdates">Daily update checks are on by default; automatic download and installation are opt-in. Both can be turned off in the pin's right-click menu. GitHub receives ordinary network information, including your IP address and app version; system profiling is disabled.</p>
         <p data-i18n="priv2">Accessibility lets it read other apps' menu bar icons and click them for you. Screen Recording is optional: with it, Hairpin captures only the menu bar strip to cut out icon shapes and reads the names of menu bar item windows; the shapes stay in memory. Without it, or for icons never shown, the row uses the app's own icon. Apple's items and apps without an icon show an initial in a rounded square.</p>
       </div>
       <div class="tag" role="group" aria-label="Permissions summary" data-i18n-aria="aTag">
@@ -410,7 +411,7 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
         <dl>
           <div><dt data-i18n="pA">Accessibility</dt><dd data-i18n="vReq">Required</dd><dd class="note" data-i18n="pAn">Reads and clicks menu bar icons</dd></div>
           <div><dt data-i18n="pS">Screen Recording</dt><dd data-i18n="vOpt">Optional</dd><dd class="note" data-i18n="pSn">macOS 14+, menu bar strip only</dd></div>
-          <div><dt data-i18n="pN">Network</dt><dd data-i18n="vNone">None</dd></div>
+          <div><dt data-i18n="pN">Network</dt><dd data-i18n="vUpdates">Updates only</dd></div>
           <div><dt data-i18n="pK">Keystrokes</dt><dd data-i18n="vNoLog">Never logged</dd></div>
           <div><dt data-i18n="pW">App window contents</dt><dd data-i18n="vNever">Never read</dd></div>
         </dl>
@@ -511,10 +512,11 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
       t3: "Keeps up", t3d: "It follows along as you switch apps, long app menus included, as icons come and go, and as the menu bar hides itself or goes full screen.",
       t4: "Looks right", t4d: "Icons keep their menu bar order. With Screen Recording they look just as they do in the menu bar, in a Liquid Glass row on macOS 26.",
       privEyebrow: "Permissions and privacy", privTitle: "It reads the menu bar, and nothing else.",
-      priv1: "Hairpin makes no network connections, doesn't log keystrokes and doesn't read app windows.",
+      priv1: "Hairpin connects only to check for and download updates. It never sends menu bar data, screenshots, app lists or analytics, and doesn't log keystrokes or read app windows.",
+      privUpdates: "Daily update checks are on by default; automatic download and installation are opt-in. Both can be turned off in the pin's right-click menu. GitHub receives ordinary network information, including your IP address and app version; system profiling is disabled.",
       priv2: "Accessibility lets it read other apps' menu bar icons and click them for you. Screen Recording is optional: with it, Hairpin captures only the menu bar strip to cut out icon shapes and reads the names of menu bar item windows; the shapes stay in memory. Without it, or for icons never shown, the row uses the app's own icon. Apple's items and apps without an icon show an initial in a rounded square.",
       tagTitle: "Hairpin · Care label", pA: "Accessibility", vReq: "Required", pAn: "Reads and clicks menu bar icons",
-      pS: "Screen Recording", vOpt: "Optional", pSn: "macOS 14+, menu bar strip only", pN: "Network", vNone: "None",
+      pS: "Screen Recording", vOpt: "Optional", pSn: "macOS 14+, menu bar strip only", pN: "Network", vUpdates: "Updates only",
       pK: "Keystrokes", vNoLog: "Never logged", vNever: "Never read", pW: "App window contents",
       instEyebrow: "Install", instTitle: "Three steps, one permission.",
       s1: "<strong>Download Hairpin.dmg</strong>, open it and drag Hairpin onto Applications.",
@@ -549,10 +551,11 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
       t3: "随时跟上", t3d: "切换应用（包括菜单很长的应用）、图标增减、菜单栏自动隐藏或进入全屏时，都会自动调整。",
       t4: "样子一致", t4d: "图标保持菜单栏里的顺序。授予屏幕录制后，样子和菜单栏上一致；在 macOS 26 上用 Liquid Glass 效果。",
       privEyebrow: "权限与隐私", privTitle: "只读菜单栏，别的都不碰。",
-      priv1: "Hairpin 不联网，不记录按键，也不读取应用窗口的内容。",
+      priv1: "Hairpin 仅为检查和下载更新联网，不发送菜单栏数据、截图、应用列表或统计数据，不记录按键，也不读取应用窗口的内容。",
+      privUpdates: "默认每天检查更新，自动下载安装需要主动开启；两者均可在发夹的右键菜单中关闭。GitHub 会接收 IP 地址、应用版本等常规网络信息；系统概况上报已禁用。",
       priv2: "辅助功能权限用来读取其他应用的菜单栏图标，并替你点击。屏幕录制是可选的：授权后，Hairpin 只截取菜单栏这一条来抠出图标形状，并读取菜单栏图标窗口的名称，形状只保存在内存里。不授权时，或图标从未显示过时，会使用应用自身的图标；Apple 的项目或没有应用图标的项目显示为圆角方框里的首字母。",
       tagTitle: "Hairpin · 洗标", pA: "辅助功能", vReq: "必需", pAn: "读取并点击菜单栏图标",
-      pS: "屏幕录制", vOpt: "可选", pSn: "macOS 14+，只截菜单栏", pN: "网络", vNone: "不联网",
+      pS: "屏幕录制", vOpt: "可选", pSn: "macOS 14+，只截菜单栏", pN: "网络", vUpdates: "仅限更新",
       pK: "按键", vNoLog: "不记录", vNever: "从不读取", pW: "应用窗口内容",
       instEyebrow: "安装", instTitle: "三步，一个权限。",
       s1: "<strong>下载 Hairpin.dmg</strong>，打开后把 Hairpin 拖到「应用程序」。",
