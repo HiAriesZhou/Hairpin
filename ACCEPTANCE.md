@@ -29,7 +29,7 @@ Note: the bundle ID changed from `com.hiarieszhou.notchbar` (NotchBar builds) to
 - [ ] On launch, an alert explains why Accessibility is needed, with "Open System Settings" and "Later".
 - [ ] "Open System Settings" opens the Accessibility pane directly.
 - [ ] Hairpin is listed there (or can be added with "+").
-- [ ] Before granting, clicking the Hairpin icon shows "Grant Accessibility…", then a separator, "Open on Hover", "Launch at Login" and "Quit Hairpin". Nothing else.
+- [ ] Before granting, clicking the Hairpin icon shows "Grant Accessibility…", hover/login settings, update controls and "Quit Hairpin". Update controls work without Accessibility.
 - [ ] "Grant Accessibility…" shows the same alert again.
 - [ ] After turning Hairpin on (no relaunch), the hairpin appears by the hidden icons within a few seconds (switching apps once triggers a rescan).
 
@@ -101,6 +101,20 @@ Start without it (`tccutil reset ScreenCapture com.hiarieszhou.hairpin`).
 ## Quit
 
 - [ ] "Quit Hairpin" (or ⌘Q with the menu open) removes the icon and the hairpin, and terminates the process.
+
+## Updates
+
+Use an isolated test installation and defaults domain for destructive update
+tests. Do not reset daily-use preferences or replace the user's installed app.
+
+- [ ] Fresh defaults: automatic checks on, automatic download/install off; no system notification permission prompt.
+- [ ] Manual check: current version reports no update; a newer signed feed shows version and embedded release notes, downloads and offers install/relaunch.
+- [ ] Scheduled check: a small dot appears without taking focus. The icon/pin width and hidden-item click/hover behavior stay unchanged. Both status icon and separate pin have reachable update controls by right-click and Control-click.
+- [ ] Skip a version, dismiss an update, then manually check: Sparkle's standard behavior remains usable and the dot clears appropriately.
+- [ ] Enable automatic download/install: a verified update downloads and installs on quit; the manual window can install/relaunch immediately. Opt out and relaunch: settings persist. Turning checks off also disables future automatic downloads; manual checks still work.
+- [ ] Offline, 404 feed, interrupted download, malformed feed, wrong feed/archive signature and unwritable install directory: current Hairpin continues working and no unverified replacement occurs.
+- [ ] Perform a real signed old-to-new update in the isolated installation; verify replaced version, relaunch, preserved hover/login/update settings and expected Accessibility/Screen Recording grants. Verify nested signatures and Gatekeeper on the formal notarized artifact.
+- [ ] Network requests contain no menu bar data, screenshots, app list, analytics or system profile. Release notes make no automatic external requests.
 
 ---
 

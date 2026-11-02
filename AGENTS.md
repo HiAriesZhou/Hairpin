@@ -21,8 +21,10 @@ Keep changes within that scope. Read [CONTRIBUTING.md](CONTRIBUTING.md),
 - Keep task plans, progress notes, handoff snapshots and audit reports out of
   commits. Use the ignored `.local/` directory for local process records;
   keep raw session logs and private diagnostics outside the repository.
-- Preserve the app's privacy boundaries: no network connections, keystroke
-  logging or app-window content capture. Icon captures cover only the menu bar
+- Preserve the app's privacy boundaries: network access only to check and
+  download updates, no telemetry, system profiling, keystroke logging or
+  app-window content capture. Never send menu bar data, screenshots or app lists.
+  Icon captures cover only the menu bar
   strip and stay in memory. Accessibility reads and actions serve menu bar use.
 
 ## Architecture and behavior
@@ -58,6 +60,10 @@ Keep changes within that scope. Read [CONTRIBUTING.md](CONTRIBUTING.md),
   come from `VERSION` or an exact tag on HEAD; untagged builds default to
   `0.0.0`. Formal releases must include `Hairpin.dmg` and `Hairpin.zip`, keeping
   the latest-release download URL working.
+- Keep Sparkle pinned and embed/sign its nested code inside-out. Update feeds
+  and DMG payloads require Ed25519 signatures; publish complete draft releases
+  only after verification. Daily checks default on; automatic download/install
+  defaults off. Preserve the user's settings across launches.
 - Installing or replacing an app, resetting permissions, signing, notarizing,
   pushing, merging and publishing require authorization for the current task.
   An acceptance checklist or an old session is not authorization.

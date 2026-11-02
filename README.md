@@ -42,13 +42,19 @@ Requires macOS 13 or later on Apple silicon. Real icon looks need macOS 14; the 
 - **Accessibility (required)** lets Hairpin read other apps' menu bar icons and click them for you. Turn it on in System Settings › Privacy & Security › Accessibility.
 - **Screen Recording (optional, macOS 14+)** lets Hairpin show icons as they look and tell exactly which app each belongs to. Without it, and for icons that have never been visible, the row shows the app's own icon instead (Apple's icons show an initial in a rounded square). Grant it from **Show Real Icons…** in Hairpin's menu.
 
-Hairpin makes no network connections, doesn't log keystrokes and doesn't read app windows. With Screen Recording it captures only the menu bar strip, to cut out icon shapes, and reads menu bar item windows' names; the shapes stay in memory.
+Hairpin connects to GitHub only to check for and download updates. It sends no menu bar data, screenshots, app lists, analytics or system profile. GitHub receives ordinary network information, including your IP address and the app version in the update request. Hairpin doesn't log keystrokes or read app window contents. With Screen Recording it captures only the menu bar strip, to cut out icon shapes, and reads menu bar item windows' names; the shapes stay in memory.
+
+### Updates
+
+Hairpin checks once a day by default and marks its pin with a small dot when a version is available. Right-click the pin and choose **Check for Updates…** (or the available version) to review and install it. You can disable automatic checks in the same menu; manual checks still work.
+
+**Automatically Download and Install Updates** is off by default. Enabling it downloads verified updates in the background and installs them when Hairpin quits. You can also install and relaunch from the update window. Updates use Sparkle with signed feeds and signed installation packages. Users of 0.2.3 and earlier need to install an updater-capable release manually once.
 
 ### Using Hairpin
 
 - **Open the row:** rest the pointer on the hairpin for half a second (it closes when you move away), or click it (it stays until you click elsewhere, click the hairpin again or press Escape).
 - **Order:** Apple's icons on the right, the others by when their app launched, the earliest rightmost, as in the menu bar.
-- **Hairpin's menu:** click Hairpin's own icon (right-click it while it's the hairpin) for the number of hidden icons, **Show Real Icons…**, **Open on Hover**, **Launch at Login** and **Quit Hairpin**.
+- **Hairpin's menu:** click Hairpin's own icon (right-click it while it's the hairpin), or right-click the separate pin, for the hidden-icon count, permissions, hover/login settings, update controls and **Quit Hairpin**.
 - **Can't find Hairpin?** Open Hairpin.app again while it's running. The hidden icons drop down at the pointer, or the menu appears if none are hidden.
 
 ### Limitations
@@ -65,6 +71,7 @@ Hairpin makes no network connections, doesn't log keystrokes and doesn't read ap
 ```sh
 swift test               # unit tests
 scripts/bundle.sh        # Hairpin.app and Hairpin.zip, ad hoc signed
+scripts/test-updates.sh  # isolated update settings and signed-feed validation
 scripts/dmg.sh           # then Hairpin.dmg
 ```
 
@@ -96,13 +103,19 @@ Needs Xcode or the Command Line Tools. An ad hoc build gets new privacy grants a
 - **辅助功能（必需）**：用来读取其他应用的菜单栏图标，并替你点击它们。在「系统设置 › 隐私与安全性 › 辅助功能」里打开。
 - **屏幕录制（可选，macOS 14 及以上）**：用来显示图标的真实样子，并准确识别每个图标属于哪个应用。不授权时，或图标从未显示过时，会使用应用自身的图标；Apple 的项目或没有应用图标的项目显示为圆角方框里的首字母。可以从 Hairpin 菜单里的 **Show Real Icons…** 授权。
 
-Hairpin 不联网，不记录按键，也不读取应用窗口的内容。授予屏幕录制后，它只截取菜单栏这一条来抠出图标形状，并读取菜单栏图标窗口的名称；图标形状只保存在内存里。
+Hairpin 仅为检查和下载更新访问 GitHub，不发送菜单栏数据、截图、应用列表、统计数据或系统概况。GitHub 会接收 IP 地址、更新请求中的应用版本等常规网络信息。Hairpin 不记录按键，也不读取应用窗口的内容。授予屏幕录制后，它只截取菜单栏这一条来抠出图标形状，并读取菜单栏图标窗口的名称；图标形状只保存在内存里。
+
+### 更新
+
+默认每天检查一次更新，发现新版本时在发夹上显示小圆点。右键点击发夹，选择 **Check for Updates…** 或可用版本，即可查看说明并安装。可以在同一菜单关闭自动检查，仍可手动检查。
+
+**Automatically Download and Install Updates** 默认关闭。开启后会在后台下载经过验证的更新，并在退出 Hairpin 时安装；也可以在更新窗口选择立即安装并重新启动。更新通过 Sparkle 校验 feed 和安装包的签名。0.2.3 及更早版本的用户需要手动安装一次支持更新的版本。
 
 ### 使用
 
 - **展开**：鼠标在发卡上停留半秒（移开后收起），或者点击发卡（保持展开，直到点击别处、再点一次发卡或按 Esc）。
 - **顺序**：系统图标在最右边，其余按应用启动先后排列，越早启动越靠右，和菜单栏一致。
-- **Hairpin 菜单**：点击 Hairpin 自己的图标（它兼当发卡时用右键），可以看到被藏起来的图标数量，以及 **Show Real Icons…**、**Open on Hover**、**Launch at Login** 和 **Quit Hairpin**。
+- **Hairpin 菜单**：点击 Hairpin 自己的图标（它兼当发卡时用右键），或右键点击独立发卡，可以查看隐藏图标数量、权限、悬停与登录设置、更新控制及 **Quit Hairpin**。
 - **找不到 Hairpin？** 在它运行时再打开一次 Hairpin.app，被藏起来的图标会在鼠标指针处展开；没有图标被藏起来时，会弹出菜单。
 
 ### 已知限制
