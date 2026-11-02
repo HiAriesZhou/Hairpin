@@ -5,13 +5,19 @@ import AppKit
 /// pin lies across the bottom, its upper prong crimped; the bow, two looped
 /// outlines and a solid knot, sits on top; the whole is tilted a little.
 enum HairpinIcon {
-    static func image(side: CGFloat = 18) -> NSImage {
+    static func image(side: CGFloat = 18, updateAvailable: Bool = false) -> NSImage {
         let image = NSImage(size: NSSize(width: side, height: side), flipped: false) { rect in
             draw(in: rect)
+            if updateAvailable {
+                NSColor.black.setFill()
+                NSBezierPath(ovalIn: NSRect(x: rect.maxX - side * 0.19,
+                                           y: rect.maxY - side * 0.19,
+                                           width: side * 0.17, height: side * 0.17)).fill()
+            }
             return true
         }
         image.isTemplate = true
-        image.accessibilityDescription = "Hairpin"
+        image.accessibilityDescription = updateAvailable ? "Hairpin — update available" : "Hairpin"
         return image
     }
 
