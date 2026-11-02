@@ -43,6 +43,17 @@ rm -rf "$APP" "$ZIP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/Hairpin" "$APP/Contents/MacOS/Hairpin"
 cp "$ROOT/LICENSE" "$APP/Contents/Resources/LICENSE"
+# SwiftPM links the binary framework, but a distributable .app must embed it.
+SPARKLE="$ROOT/.build/artifacts/sparkle/Sparkle"
+mkdir -p "$APP/Contents/Frameworks"
+ditto "$SPARKLE/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework" \
+      "$APP/Contents/Frameworks/Sparkle.framework"
+cp "$SPARKLE/LICENSE" "$APP/Contents/Resources/Sparkle-LICENSE"
+PUBLIC_KEY="$(cat "$ROOT/scripts/sparkle-public-key.txt")"
+if [[ ! "$PUBLIC_KEY" =~ ^[A-Za-z0-9+/]{43}=$ ]]; then
+  echo "error: invalid Sparkle public key" >&2
+  exit 1
+fi
 
 echo "==> Drawing the app icon"
 ICON_BUILD="$ROOT/.build/app-icon"
@@ -81,6 +92,26 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <string>13.0</string>
     <key>LSUIElement</key>
     <true/>
+    <key>SUFeedURL</key>
+    <string>https://github.com/HiAriesZhou/Hairpin/releases/latest/download/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>$PUBLIC_KEY</string>
+    <key>SURequireSignedFeed</key>
+    <true/>
+    <key>SUVerifyUpdateBeforeExtraction</key>
+    <true/>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
+    <key>SUScheduledCheckInterval</key>
+    <integer>86400</integer>
+    <key>SUAutomaticallyUpdate</key>
+    <false/>
+    <key>SUEnableSystemProfiling</key>
+    <false/>
+    <key>SUSendProfileInfo</key>
+    <false/>
+    <key>SUEnableJavaScript</key>
+    <false/>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
     <key>NSHighResolutionCapable</key>
@@ -94,6 +125,17 @@ printf 'APPL????' > "$APP/Contents/PkgInfo"
 plutil -lint "$APP/Contents/Info.plist"
 
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"
+SIGN_FLAGS=(--force -s "$SIGN_IDENTITY")
+if [[ "$SIGN_IDENTITY" != "-" ]]; then
+  SIGN_FLAGS+=(--options runtime --timestamp)
+fi
+# Sign nested code inside-out. Preserve Downloader's sandbox entitlements.
+FRAMEWORK="$APP/Contents/Frameworks/Sparkle.framework/Versions/B"
+codesign "${SIGN_FLAGS[@]}" "$FRAMEWORK/XPCServices/Installer.xpc"
+codesign "${SIGN_FLAGS[@]}" --preserve-metadata=entitlements "$FRAMEWORK/XPCServices/Downloader.xpc"
+codesign "${SIGN_FLAGS[@]}" "$FRAMEWORK/Autoupdate"
+codesign "${SIGN_FLAGS[@]}" "$FRAMEWORK/Updater.app"
+codesign "${SIGN_FLAGS[@]}" "$APP/Contents/Frameworks/Sparkle.framework"
 if [[ "$SIGN_IDENTITY" == "-" ]]; then
   echo "==> Signing (ad-hoc)"
   codesign --force -s - "$APP"
@@ -102,7 +144,7 @@ else
   echo "==> Signing ($SIGN_IDENTITY, hardened runtime)"
   codesign --force --options runtime --timestamp -s "$SIGN_IDENTITY" "$APP"
 fi
-codesign --verify --strict --verbose=2 "$APP"
+codesign --verify --deep --strict --verbose=2 "$APP"
 
 echo "==> Zipping $ZIP"
 ditto -c -k --keepParent "$APP" "$ZIP"

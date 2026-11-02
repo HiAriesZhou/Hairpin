@@ -10,6 +10,7 @@ private let log = Logger(subsystem: "com.hiarieszhou.hairpin", category: "scan")
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private let menu = NSMenu()
+    private let updates = Updates()
     private let stack = NotchStack()
 
     /// Items hidden by the notch, from the latest finished scan; nil until the
@@ -82,6 +83,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         stack.opensOnHover = UserDefaults.standard.bool(forKey: Self.openOnHoverKey)
         stack.onExpand = { [weak self] in self?.stackWillExpand() }
         stack.onSelect = { [weak self] id in self?.openExtra(id: id) }
+        stack.onMenu = { [weak self] in
+            guard let self else { return }
+            self.menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+        }
+        updates.onChange = { [weak self] in self?.updateStack() }
+        updates.start()
 
         // Keep the snapshot fresh: the stack shows whenever something is hidden.
         let workspace = NSWorkspace.shared.notificationCenter
@@ -347,6 +354,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func updateStack() {
+        let hasUpdate = updates.availableVersion != nil
+        statusItem.button?.image = HairpinIcon.image(updateAvailable: hasUpdate)
+        stack.updateAvailable = hasUpdate
         if let button = statusItem.button {
             let name = button.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) ?? .aqua
             stack.appearance = NSAppearance(named: name)
@@ -354,6 +364,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         stack.update(stackEntries(), anchor: anchor)
         statusItem.button?.toolTip = stack.usesButton
             ? "Hairpin — click for hidden icons, right-click for settings" : "Hairpin"
+        if let version = updates.availableVersion {
+            statusItem.button?.toolTip = "Hairpin \(version) available — right-click for updates"
+        }
     }
 
     private func stackEntries() -> [StackEntry] {
@@ -402,6 +415,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             login.state = .off
         }
         menu.addItem(login)
+        menu.addItem(.separator())
+        let check = action(updates.availableVersion.map { "Hairpin \($0) Available…" } ?? "Check for Updates…",
+                           #selector(checkForUpdates))
+        check.isEnabled = updates.canCheck
+        menu.addItem(check)
+        let autoCheck = action("Automatically Check for Updates", #selector(toggleUpdateChecks))
+        autoCheck.state = updates.automaticallyChecks ? .on : .off
+        autoCheck.toolTip = "Check GitHub once a day; menu bar data is never sent"
+        menu.addItem(autoCheck)
+        let autoInstall = action("Automatically Download and Install Updates", #selector(toggleAutomaticUpdates))
+        autoInstall.state = updates.automaticallyInstalls ? .on : .off
+        autoInstall.toolTip = "Download verified updates in the background and install when Hairpin quits"
+        menu.addItem(autoInstall)
+        menu.addItem(.separator())
         let quitItem = NSMenuItem(title: "Quit Hairpin", action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
@@ -464,6 +491,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         stack.opensOnHover.toggle()
         UserDefaults.standard.set(stack.opensOnHover, forKey: Self.openOnHoverKey)
     }
+
+    @objc private func checkForUpdates() { updates.check() }
+    @objc private func toggleUpdateChecks() { updates.automaticallyChecks.toggle() }
+    @objc private func toggleAutomaticUpdates() { updates.automaticallyInstalls.toggle() }
 
     @objc private func grantScreenCapture() {
         IconCapture.requestAccess(openSettingsIfAsked: true)

@@ -57,6 +57,10 @@ final class NotchStack: NSObject {
     var onExpand: (() -> Void)?
     /// An item was clicked; the row stays open.
     var onSelect: ((String) -> Void)?
+    var onMenu: (() -> Void)?
+    var updateAvailable = false {
+        didSet { if let pile { label(pile) } }
+    }
     /// The menu bar's light or dark look, which the pin is drawn for.
     var appearance: NSAppearance? {
         didSet {
@@ -232,10 +236,6 @@ final class NotchStack: NSObject {
         }
     }
 
-    @objc private func pileClicked(_ sender: Any?) {
-        toggle()
-    }
-
     /// The pin, or Hairpin's icon while it holds the items.
     private func isOpener(_ window: NSWindow?) -> Bool {
         window != nil && (window === pile || (usesButton && window === button?.window))
@@ -296,12 +296,14 @@ final class NotchStack: NSObject {
             content.addSubview(view)
         }
         let chip = content.subviews[0], mark = content.subviews[1] as? NSImageView
+        mark?.image = HairpinIcon.image(side: Self.pinSide, updateAvailable: updateAvailable)
         chip.isHidden = anchor?.covered == nil
         chip.frame = NSRect(x: 0, y: ((content.bounds.height - Self.chipHeight) / 2).rounded(),
                             width: content.bounds.width, height: Self.chipHeight)
         chip.layer?.backgroundColor = (isDark ? NSColor(white: 0.16, alpha: 1) : NSColor(white: 0.95, alpha: 1)).cgColor
         mark?.contentTintColor = foreground
         content.toolTip = entries.count == 1 ? "1 hidden icon" : "\(entries.count) hidden icons"
+        if updateAvailable { content.toolTip = "Update available — right-click for settings" }
         content.setAccessibilityLabel(content.toolTip)
     }
 
@@ -413,11 +415,12 @@ final class NotchStack: NSObject {
         let panel = Self.panel()
         // Above the menu bar and status items, below menus.
         panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.statusWindow)) + 1)
-        let content = NSView()
+        let content = PinView()
+        content.onMenu = { [weak self] in self?.onMenu?() }
+        content.onClick = { [weak self] in self?.toggle() }
         content.addTrackingArea(NSTrackingArea(rect: .zero,
                                                options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
                                                owner: self, userInfo: nil))
-        content.addGestureRecognizer(NSClickGestureRecognizer(target: self, action: #selector(pileClicked(_:))))
         panel.contentView = content
         return panel
     }
@@ -454,6 +457,27 @@ final class NotchStack: NSObject {
         copy.size = NSSize(width: (image.size.width * scale).rounded(), height: (image.size.height * scale).rounded())
         copy.isTemplate = image.isTemplate
         return copy
+    }
+}
+
+/// Keep secondary clicks separate from the primary click/hover row gestures.
+private final class PinView: NSView {
+    var onMenu: (() -> Void)?
+    var onClick: (() -> Void)?
+    private var primaryClick = false
+    // The chip and image are decorations; route every click through this view.
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        super.hitTest(point) == nil ? nil : self
+    }
+    override func rightMouseDown(with event: NSEvent) { onMenu?() }
+    override func mouseDown(with event: NSEvent) {
+        primaryClick = !event.modifierFlags.contains(.control)
+        if !primaryClick { onMenu?() }
+    }
+    override func mouseUp(with event: NSEvent) {
+        let clickedInside = bounds.contains(convert(event.locationInWindow, from: nil))
+        if primaryClick && clickedInside { onClick?() }
+        primaryClick = false
     }
 }
 

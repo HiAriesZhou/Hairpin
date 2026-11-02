@@ -37,6 +37,9 @@ jobs:
       - name: Bundle
         run: scripts/bundle.sh
 
+      - name: Update integration and feed validation
+        run: scripts/test-updates.sh
+
       - name: Disk image
         run: scripts/dmg.sh
 
@@ -56,6 +59,9 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: macos-latest
+    concurrency:
+      group: stable-release
+      cancel-in-progress: false
     permissions:
       contents: write # create the GitHub Release
     steps:
@@ -121,17 +127,55 @@ jobs:
       - name: Notarize disk image
         run: scripts/notarize.sh dmg
 
-      - name: Publish release
+      - name: Prepare draft and previous feed
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
         run: |
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" Hairpin.zip Hairpin.dmg --clobber
-          else
-            gh release create "$TAG" Hairpin.zip Hairpin.dmg --verify-tag \
-              --title "Hairpin $TAG" --generate-notes
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'error: stable vX.Y.Z tag required' >&2; exit 1; }
+          mkdir -p .build/update-feed
+          gh api "repos/$GITHUB_REPOSITORY/releases/latest" > "$RUNNER_TEMP/latest-release.json"
+          if jq -e '.assets[] | select(.name == "appcast.xml")' "$RUNNER_TEMP/latest-release.json" >/dev/null; then
+            PREVIOUS_TAG="$(jq -r .tag_name "$RUNNER_TEMP/latest-release.json")"
+            gh release download "$PREVIOUS_TAG" --pattern appcast.xml --dir .build/update-feed
+            mv .build/update-feed/appcast.xml .build/update-feed/previous.xml
           fi
+          gh api --method POST "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
+            -f tag_name="$TAG" --jq .body > "$RUNNER_TEMP/release-notes.txt"
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" > "$RUNNER_TEMP/releases.json"
+          EXISTING="$(jq -r --arg tag "$TAG" '.[] | select(.tag_name == $tag) | .draft' "$RUNNER_TEMP/releases.json")"
+          if [[ "$EXISTING" == false ]]; then
+            echo 'error: refusing to replace an already published release' >&2
+            exit 1
+          elif [[ "$EXISTING" != true ]]; then
+            gh release create "$TAG" --draft --verify-tag --title "Hairpin $TAG" \
+              --notes-file "$RUNNER_TEMP/release-notes.txt"
+          fi
+
+      - name: Generate signed update feed
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          [[ -n "$SPARKLE_PRIVATE_KEY" ]] || { echo 'error: missing Sparkle signing key' >&2; exit 1; }
+          if [[ -f .build/update-feed/previous.xml ]]; then
+            scripts/appcast.sh "$TAG" "$RUNNER_TEMP/release-notes.txt" .build/update-feed/previous.xml
+          else
+            scripts/appcast.sh "$TAG" "$RUNNER_TEMP/release-notes.txt"
+          fi
+
+      - name: Upload, verify and publish complete release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release upload "$TAG" Hairpin.zip Hairpin.dmg .build/update-feed/appcast.xml --clobber
+          mkdir -p "$RUNNER_TEMP/release-check"
+          gh release download "$TAG" --dir "$RUNNER_TEMP/release-check"
+          cmp Hairpin.zip "$RUNNER_TEMP/release-check/Hairpin.zip"
+          cmp Hairpin.dmg "$RUNNER_TEMP/release-check/Hairpin.dmg"
+          cmp .build/update-feed/appcast.xml "$RUNNER_TEMP/release-check/appcast.xml"
+          gh release edit "$TAG" --draft=false --latest
 
       - name: Remove signing material
         if: always()
