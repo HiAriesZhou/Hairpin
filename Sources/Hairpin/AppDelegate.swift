@@ -424,11 +424,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                            #selector(checkForUpdates))
         check.isEnabled = updates.canCheck
         menu.addItem(check)
-        let autoCheck = action("Automatically Check for Updates", #selector(toggleUpdateChecks))
-        autoCheck.state = updates.automaticallyChecks ? .on : .off
-        autoCheck.toolTip = "Check GitHub once a day; menu bar data is never sent"
-        menu.addItem(autoCheck)
-        let autoInstall = action("Automatically Download and Install Updates", #selector(toggleAutomaticUpdates))
+        let autoInstall = action("Update Automatically", #selector(toggleAutomaticUpdates))
         autoInstall.state = updates.automaticallyInstalls ? .on : .off
         autoInstall.toolTip = "Download verified updates in the background and install when Hairpin quits"
         menu.addItem(autoInstall)
@@ -497,7 +493,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func checkForUpdates() { updates.check() }
-    @objc private func toggleUpdateChecks() { updates.automaticallyChecks.toggle() }
     @objc private func toggleAutomaticUpdates() { updates.automaticallyInstalls.toggle() }
 
     @objc private func grantScreenCapture() {
