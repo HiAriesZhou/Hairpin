@@ -54,20 +54,10 @@ jobs:
           fetch-depth: 0
 
       - name: Toolchain
-        id: toolchain
         run: |
           sw_vers
           xcodebuild -version
           swift --version
-          echo "key=$({ xcodebuild -version; swift --version; } | shasum -a 256 | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Swift build
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: .build
-          key: ${{ runner.os }}-${{ runner.arch }}-swift-${{ steps.toolchain.outputs.key }}-${{ hashFiles('Package.swift', 'Package.resolved') }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-swift-${{ steps.toolchain.outputs.key }}-${{ hashFiles('Package.swift', 'Package.resolved') }}-
 
       # The test target doesn't depend on the app, so build it explicitly.
       - name: Build
