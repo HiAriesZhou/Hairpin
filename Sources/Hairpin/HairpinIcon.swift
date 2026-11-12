@@ -5,7 +5,16 @@ import AppKit
 /// pin lies across the bottom, its upper prong crimped; the bow, two looped
 /// outlines and a solid knot, sits on top; the whole is tilted a little.
 enum HairpinIcon {
-    static func image(side: CGFloat = 18, updateAvailable: Bool = false) -> NSImage {
+    /// The most hidden icons the badge spells out; past it, it shows this.
+    static let badgeLimit = 99
+
+    /// `badge` is the hidden-icon count: 0 or nil draws none, anything past
+    /// `badgeLimit` draws that limit. The number is cut out of a solid dot at
+    /// the bottom right, so it stays legible at menu bar size and takes the
+    /// menu bar's color like the rest of the template image.
+    static func image(side: CGFloat = 18, updateAvailable: Bool = false, badge: Int? = nil) -> NSImage {
+        let count = badge.flatMap { $0 > 0 ? $0 : nil }
+        let shown = count.map { min($0, badgeLimit) }
         let image = NSImage(size: NSSize(width: side, height: side), flipped: false) { rect in
             draw(in: rect)
             if updateAvailable {
@@ -14,11 +23,52 @@ enum HairpinIcon {
                                            y: rect.maxY - side * 0.19,
                                            width: side * 0.17, height: side * 0.17)).fill()
             }
+            if let shown { drawBadge(shown, in: rect) }
             return true
         }
         image.isTemplate = true
-        image.accessibilityDescription = updateAvailable ? "Hairpin — update available" : "Hairpin"
+        image.accessibilityDescription = described(updateAvailable: updateAvailable, badge: count)
         return image
+    }
+
+    private static func described(updateAvailable: Bool, badge: Int?) -> String {
+        let count = badge.map { "\($0) hidden" }
+        switch (updateAvailable, count) {
+        case (true, let count?): return "Hairpin — update available, \(count)"
+        case (true, nil): return "Hairpin — update available"
+        case (false, let count?): return "Hairpin — \(count)"
+        case (false, nil): return "Hairpin"
+        }
+    }
+
+    /// A solid dot with the digits knocked out, ringed by a thin gap so it
+    /// stays separate from the mark. Two digits widen it into a capsule.
+    private static func drawBadge(_ count: Int, in rect: NSRect) {
+        let unit = min(rect.width, rect.height) / 18
+        // Two digits are set smaller and tighter, to leave more of the mark.
+        let wide = count > 9
+        let text = NSAttributedString(string: "\(count)", attributes: [
+            .font: NSFont.systemFont(ofSize: (wide ? 6 : 6.6) * unit, weight: .bold),
+            .kern: (wide ? -0.35 : 0) * unit,
+            .foregroundColor: NSColor.black,
+        ])
+        let digits = text.size()
+        let height = (wide ? 8.4 : 9) * unit
+        let width = max(height, digits.width + (wide ? 2.2 : 3.2) * unit)
+        let badge = NSRect(x: rect.maxX - width - 0.4 * unit, y: rect.minY + 0.4 * unit,
+                           width: width, height: height)
+        guard let context = NSGraphicsContext.current?.cgContext else { return }
+        NSColor.black.setFill()
+        // Clear the mark under the dot and a gap around it, then the digits.
+        context.setBlendMode(.destinationOut)
+        NSBezierPath(roundedRect: badge.insetBy(dx: -unit, dy: -unit),
+                     xRadius: height / 2 + unit, yRadius: height / 2 + unit).fill()
+        context.setBlendMode(.normal)
+        NSBezierPath(roundedRect: badge, xRadius: height / 2, yRadius: height / 2).fill()
+        context.setBlendMode(.destinationOut)
+        text.draw(at: NSPoint(x: badge.midX - digits.width / 2,
+                              y: badge.midY - digits.height / 2))
+        context.setBlendMode(.normal)
     }
 
     private static func draw(in rect: NSRect) {

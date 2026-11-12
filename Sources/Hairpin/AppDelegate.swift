@@ -355,13 +355,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func updateStack() {
         let hasUpdate = updates.availableVersion != nil
-        statusItem.button?.image = HairpinIcon.image(updateAvailable: hasUpdate)
+        stack.badge = hidden?.count
         stack.updateAvailable = hasUpdate
         if let button = statusItem.button {
             let name = button.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) ?? .aqua
             stack.appearance = NSAppearance(named: name)
         }
         stack.update(stackEntries(), anchor: anchor)
+        // The count marks where the hidden icons open: our icon carries it
+        // only while it holds them; otherwise a click on it opens the menu.
+        statusItem.button?.image = HairpinIcon.image(updateAvailable: hasUpdate,
+                                                     badge: stack.usesButton ? hidden?.count : nil)
         statusItem.button?.toolTip = stack.usesButton
             ? "Hairpin — click for hidden icons, right-click for settings" : "Hairpin"
         if let version = updates.availableVersion {

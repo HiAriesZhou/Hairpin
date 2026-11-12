@@ -45,7 +45,8 @@ Start without it (`tccutil reset ScreenCapture com.hiarieszhou.hairpin`).
 ## The hairpin
 
 - [ ] With icons hidden, the hairpin appears at the left end of the shown icons, right of the notch, covering no icon and no app menu.
-- [ ] With nothing hidden, the hairpin isn't there.
+- [ ] With nothing hidden, the hairpin isn't there and Hairpin's own icon shows no number.
+- [ ] With icons hidden, the hairpin's mark shows their count in a dot at its bottom right (Hairpin's own icon shows it too, while it holds them). 0 shows nothing; 100 shows 99. The number is readable in both the light and the dark menu bar, and the update dot, when present, stays at the top right.
 - [ ] Switching to the app with long menus: the hairpin moves so it covers none of them (left of the notch, or onto the leftmost shown icon on a capsule that hides it, and that icon then shows up in the row too). Switching back: it returns right of the notch.
 - [ ] A running app adding a menu bar item (e.g. a timer starting, or Codex using the computer) moves the hairpin within about a second, without switching apps; it never ends up over a shown icon.
 - [ ] With "Automatically hide and show the menu bar" on, the hairpin appears with the menu bar and goes with it, and opening Hairpin.app again still reaches the hidden icons or the menu.

@@ -20,6 +20,8 @@ With nothing hidden there's no pin. While Hairpin's own icon is shown in the not
 
 ## Showing items
 
+The hairpin carries the count of hidden icons, cut out of a solid dot at the bottom right of its mark, on the separate pin, and on Hairpin's own icon while that icon holds them (otherwise a click on it opens the menu, so it shows no count). Nothing hidden means no count. The count stops at 99. The update dot stays at the top right, so the two don't meet.
+
 With Screen Recording (macOS 14 or later), Hairpin captures the menu bar strip once while an item is shown: one ScreenCaptureKit shot as is, one without the menu bar's windows. The difference between the two is the item's shape, kept as a template image so it takes the row's light or dark look. A hidden item isn't drawn, so it shows as it last looked; an item never seen (or any item, without Screen Recording) shows its app's own icon, or, for Apple's items and apps without an icon, the app's initial in a rounded square. Captures are keyed by the item's status window, tried once with a couple of retries, and kept only in memory. ScreenCaptureKit can turn on the recording indicator, which is why captures are rare.
 
 The row orders items the way the menu bar adds them: Apple's on the right, the others by launch, the earliest rightmost.
