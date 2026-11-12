@@ -21,7 +21,9 @@ cp Hairpin.app/Contents/Info.plist "$APP/Contents/Info.plist"
 "$APP/Contents/MacOS/UpdateTests" disabled
 
 swift Tests/UpdateIntegration/FeedFixtures.swift "$TEST_DIR"
-VALIDATE=(swift scripts/ValidateUpdateFeed.swift validate)
+# Compile once: every fixture below exercises the same release validator.
+swiftc scripts/ValidateUpdateFeed.swift -o "$TEST_DIR/validate-feed"
+VALIDATE=("$TEST_DIR/validate-feed" validate)
 URL=https://github.com/HiAriesZhou/Hairpin/releases/download/v0.3.0/Hairpin.dmg
 "${VALIDATE[@]}" "$TEST_DIR/valid.xml" "$TEST_DIR/Hairpin.dmg" 100 0.3.0 "$URL" "$TEST_DIR/public-key" "$TEST_DIR/previous.xml"
 for FEED in tampered truncated unpinned bad-archive-signature; do

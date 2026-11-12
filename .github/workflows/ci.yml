@@ -12,9 +12,41 @@ on:
 permissions:
   contents: read
 
+# PR revisions supersede one another; every main push and tag remains distinct.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  # Every push and pull request: build, test and package, ad hoc signed.
-  build:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      app: ${{ steps.filter.outputs.app }}
+    steps:
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        id: filter
+        with:
+          script: |
+            let app = true;
+            if (context.eventName === 'pull_request') {
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                ...context.repo, pull_number: context.issue.number, per_page: 100
+              });
+              // Build on empty/incomplete results and unknown paths, including renames.
+              if (files.length > 0 && files.length < 3000) {
+                const paths = files.flatMap(file => [file.filename, file.previous_filename].filter(Boolean));
+                app = paths.some(path => !(/^[^/]+\.md$/.test(path) || path.startsWith('docs/')));
+              }
+            }
+            core.setOutput('app', String(app));
+
+  # Every main push and code PR: build, test and package, ad hoc signed.
+  build-app:
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -22,10 +54,20 @@ jobs:
           fetch-depth: 0
 
       - name: Toolchain
+        id: toolchain
         run: |
           sw_vers
           xcodebuild -version
           swift --version
+          echo "key=$({ xcodebuild -version; swift --version; } | shasum -a 256 | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Swift build
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: .build
+          key: ${{ runner.os }}-${{ runner.arch }}-swift-${{ steps.toolchain.outputs.key }}-${{ hashFiles('Package.swift', 'Package.resolved') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-swift-${{ steps.toolchain.outputs.key }}-${{ hashFiles('Package.swift', 'Package.resolved') }}-
 
       # The test target doesn't depend on the app, so build it explicitly.
       - name: Build
@@ -51,6 +93,25 @@ jobs:
             Hairpin.zip
             Hairpin.dmg
           if-no-files-found: error
+
+  # Preserve the required context and fail closed if change detection fails.
+  build:
+    needs: [changes, build-app]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify required results
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          APP_REQUIRED: ${{ needs.changes.outputs.app }}
+          APP: ${{ needs.build-app.result }}
+        run: |
+          test "$CHANGES" = success
+          if [ "$APP_REQUIRED" = true ]; then
+            test "$APP" = success
+          else
+            test "$APP" = skipped
+          fi
 
   # Version tags (which only the maintainer can create): sign with the
   # Developer ID, notarize and publish. This is the only job that reads the
