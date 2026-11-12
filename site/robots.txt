@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://hairpin.arieszhou.com/sitemap.xml
