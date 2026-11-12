@@ -69,6 +69,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Prepare release notes
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'error: stable vX.Y.Z tag required' >&2; exit 1; }
+          NOTES="docs/release-notes/$TAG.txt"
+          [[ -f "$NOTES" ]] && grep -q '[^[:space:]]' "$NOTES" || { echo "error: missing or empty release notes: $NOTES" >&2; exit 1; }
+          cp "$NOTES" "$RUNNER_TEMP/release-notes.txt"
+
       # Secrets are decoded into files in the runner's temporary directory and
       # never printed; the keychain and files are removed at the end.
       - name: Import signing certificate
@@ -140,14 +149,14 @@ jobs:
             gh release download "$PREVIOUS_TAG" --pattern appcast.xml --dir .build/update-feed
             mv .build/update-feed/appcast.xml .build/update-feed/previous.xml
           fi
-          gh api --method POST "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
-            -f tag_name="$TAG" --jq .body > "$RUNNER_TEMP/release-notes.txt"
           gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" > "$RUNNER_TEMP/releases.json"
           EXISTING="$(jq -r --arg tag "$TAG" '.[] | select(.tag_name == $tag) | .draft' "$RUNNER_TEMP/releases.json")"
           if [[ "$EXISTING" == false ]]; then
             echo 'error: refusing to replace an already published release' >&2
             exit 1
-          elif [[ "$EXISTING" != true ]]; then
+          elif [[ "$EXISTING" == true ]]; then
+            gh release edit "$TAG" --notes-file "$RUNNER_TEMP/release-notes.txt"
+          else
             gh release create "$TAG" --draft --verify-tag --title "Hairpin $TAG" \
               --notes-file "$RUNNER_TEMP/release-notes.txt"
           fi

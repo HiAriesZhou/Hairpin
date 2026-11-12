@@ -4,7 +4,13 @@ Releases are signed with a Developer ID, notarized by Apple and published by CI.
 
 ## Cutting a release
 
-1. Merge everything for the release into `main` through pull requests.
+1. Write `docs/release-notes/vX.Y.Z.txt` for the target version and merge it
+   with the release changes into `main` through pull requests. Use a short
+   plain-text heading and bullets describing changes users will notice. Leave
+   out Markdown markup, commit titles, contributor mentions, pull-request URLs
+   and website-only changes. The same text appears on GitHub and in the app's
+   update window. The release job rejects missing or blank notes before reading
+   signing credentials; it never falls back to generated development logs.
 2. Tag `main` and push the tag (only the maintainer can create `v*` tags):
    ```sh
    git tag -a v0.3.0 -m "Hairpin 0.3.0" && git push origin v0.3.0
@@ -71,8 +77,9 @@ NOTARY_KEY_PATH=… NOTARY_KEY_ID=… NOTARY_ISSUER_ID=… scripts/notarize.sh d
 scripts/appcast.sh v0.3.0 release-notes.txt previous-appcast.xml
 ```
 
-Omit the previous-feed argument only for the first updater release. Keep release
-notes and downloaded feeds outside tracked source. The generated feed is
+Omit the previous-feed argument only for the first updater release. Keep
+downloaded feeds and generated release artifacts outside tracked source;
+keep the authored notes in `docs/release-notes/`. The generated feed is
 `.build/update-feed/appcast.xml`. `scripts/ValidateUpdateFeed.swift` verifies
 Ed25519 feed/archive signatures, version, build monotonicity, download URL and
 payload length with the public key and no private-key access.
