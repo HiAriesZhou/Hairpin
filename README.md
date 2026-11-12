@@ -25,7 +25,7 @@ A tiny macOS menu bar app that keeps the icons hidden behind the MacBook notch w
 When there are more menu bar icons than fit beside the notch, macOS quietly hides the rest. Hairpin notices, and puts a small hairpin at the left end of your menu bar icons that holds the hidden ones.
 
 - **Hover or click the hairpin** and the hidden icons drop down in a row. Click one to open its menu.
-- **Only there when needed.** With nothing hidden, there's no hairpin.
+- **Only there when needed.** With nothing hidden, there's no hairpin. While icons are hidden, the hairpin's mark shows how many.
 - **Keeps up** as you switch apps (long app menus included), as icons come and go, and as the menu bar hides itself or goes full screen.
 - **Looks right:** icons as they appear in your menu bar, in a Liquid Glass row on macOS 26.
 
@@ -86,7 +86,7 @@ Needs Xcode or the Command Line Tools. An ad hoc build gets new privacy grants a
 菜单栏图标多到刘海旁边放不下时，macOS 会悄悄把放不下的藏起来。Hairpin 会注意到这一点，在菜单栏图标的最左端放一个小发卡，被藏起来的图标都收在里面。
 
 - **悬停或点击发卡**，被藏起来的图标会在下方展开成一行；点一个就打开它的菜单。
-- **只在需要时出现**：没有图标被藏起来时，发卡不会出现。
+- **只在需要时出现**：没有图标被藏起来时，发卡不会出现。有图标被藏起来时，发卡上会显示数量。
 - **随时跟上**：切换应用（包括菜单很长的应用）、图标增减、菜单栏自动隐藏或进入全屏时，都会自动调整。
 - **样子一致**：显示的就是图标在菜单栏上的样子；在 macOS 26 上用 Liquid Glass 效果。
 

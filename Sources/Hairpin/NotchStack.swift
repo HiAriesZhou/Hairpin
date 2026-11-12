@@ -61,6 +61,10 @@ final class NotchStack: NSObject {
     var updateAvailable = false {
         didSet { if let pile { label(pile) } }
     }
+    /// Hidden icons behind the pin; 0 or nil draws no count on it.
+    var badge: Int? {
+        didSet { if badge != oldValue, let pile { label(pile) } }
+    }
     /// The menu bar's light or dark look, which the pin is drawn for.
     var appearance: NSAppearance? {
         didSet {
@@ -289,14 +293,14 @@ final class NotchStack: NSObject {
             chip.layer?.cornerCurve = .continuous
             chip.autoresizingMask = [.width, .minYMargin, .maxYMargin]
             content.addSubview(chip)
-            let view = NSImageView(image: HairpinIcon.image(side: Self.pinSide))
+            let view = NSImageView(image: HairpinIcon.image(side: Self.pinSide, badge: badge))
             view.frame = content.bounds
             view.autoresizingMask = [.width, .height]
             view.imageAlignment = .alignCenter
             content.addSubview(view)
         }
         let chip = content.subviews[0], mark = content.subviews[1] as? NSImageView
-        mark?.image = HairpinIcon.image(side: Self.pinSide, updateAvailable: updateAvailable)
+        mark?.image = HairpinIcon.image(side: Self.pinSide, updateAvailable: updateAvailable, badge: badge)
         chip.isHidden = anchor?.covered == nil
         chip.frame = NSRect(x: 0, y: ((content.bounds.height - Self.chipHeight) / 2).rounded(),
                             width: content.bounds.width, height: Self.chipHeight)
