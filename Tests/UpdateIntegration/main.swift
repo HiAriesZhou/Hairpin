@@ -94,6 +94,9 @@ MainActor.assumeIsolated {
         precondition(!updates.automaticallyInstalls, "Fresh installs must not download automatically")
         updates.automaticallyInstalls = true
         precondition(updates.automaticallyChecks && updates.automaticallyInstalls)
+        updates.automaticallyInstalls = false
+        precondition(updates.automaticallyChecks && !updates.automaticallyInstalls,
+                     "Turning automatic updates off must keep checks enabled")
         updates.automaticallyChecks = false
         precondition(!updates.automaticallyChecks && !updates.automaticallyInstalls)
         updates.automaticallyInstalls = true

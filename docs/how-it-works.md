@@ -38,10 +38,15 @@ download and installation. Hairpin handles scheduled reminders through the
 gentle-reminder delegate: a dot inside the existing 18-point mark and a menu
 entry replace background alert windows. Primary click/hover behavior and pin
 width stay unchanged. Both the status item and separate pin expose the settings
-menu on secondary click; manual checks bring Sparkle's standard window forward.
+menu on secondary click. That menu has two update entries: **Check for
+Updates…** opens Sparkle's standard window, and **Update Automatically**
+turns background download and install on or off.
 
-Automatic checks default on. Automatic downloads default off; enabling them
-also enables checks. Disabling checks disables future automatic downloads.
+Automatic checks default on; the menu no longer has a separate switch for
+them. **Update Automatically** defaults off. Turning it on also
+enables checks. Turning it off stops future automatic downloads only. A saved
+preference that had checks off stays off until **Update Automatically** is
+turned on.
 An update already prepared by Sparkle may still install on quit. Preferences
 come from Sparkle's properties, not a second copy in Hairpin's defaults.
 

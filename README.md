@@ -46,9 +46,9 @@ Hairpin connects to GitHub only to check for and download updates. It sends no m
 
 ### Updates
 
-Hairpin checks once a day by default and marks its pin with a small dot when a version is available. Right-click the pin and choose **Check for Updates…** (or the available version) to review and install it. You can disable automatic checks in the same menu; manual checks still work.
+Hairpin checks once a day by default and marks its pin with a small dot when a version is available. Right-click the pin and choose **Check for Updates…** (or the available version) to review and install it.
 
-**Automatically Download and Install Updates** is off by default. Enabling it downloads verified updates in the background and installs them when Hairpin quits. You can also install and relaunch from the update window. Updates use Sparkle with signed feeds and signed installation packages. Users of 0.2.3 and earlier need to install an updater-capable release manually once.
+**Update Automatically** is off by default. Turning it on downloads verified updates in the background and installs them when Hairpin quits. Turning it off stops those downloads; the daily check remains, and manual checks still work. You can also install and relaunch from the update window. Updates use Sparkle with signed feeds and signed installation packages. Users of 0.2.3 and earlier need to install an updater-capable release manually once.
 
 ### Using Hairpin
 
@@ -107,9 +107,9 @@ Hairpin 仅为检查和下载更新访问 GitHub，不发送菜单栏数据、�
 
 ### 更新
 
-默认每天检查一次更新，发现新版本时在发夹上显示小圆点。右键点击发夹，选择 **Check for Updates…** 或可用版本，即可查看说明并安装。可以在同一菜单关闭自动检查，仍可手动检查。
+默认每天检查一次更新，发现新版本时在发夹上显示小圆点。右键点击发夹，选择 **Check for Updates…** 或可用版本，即可查看说明并安装。
 
-**Automatically Download and Install Updates** 默认关闭。开启后会在后台下载经过验证的更新，并在退出 Hairpin 时安装；也可以在更新窗口选择立即安装并重新启动。更新通过 Sparkle 校验 feed 和安装包的签名。0.2.3 及更早版本的用户需要手动安装一次支持更新的版本。
+**Update Automatically** 默认关闭。开启后会在后台下载经过验证的更新，并在退出 Hairpin 时安装；关闭后停止自动下载，每天检查仍然保留，也可以手动检查。更新窗口里仍可立即安装并重新启动。更新通过 Sparkle 校验 feed 和安装包的签名。0.2.3 及更早版本的用户需要手动安装一次支持更新的版本。
 
 ### 使用
 
