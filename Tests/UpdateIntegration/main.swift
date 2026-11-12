@@ -17,11 +17,26 @@ func badgePixels(_ image: NSImage, scale: Int) -> Data {
     return Data(bytes: bitmap.bitmapData!, count: bitmap.bytesPerRow * side)
 }
 
+// The alpha values of a region given in points from the top-left corner; the
+// bitmap holds four bytes per pixel, alpha last.
+func alphaRegion(_ pixels: Data, scale: Int, x: Range<Int>, y: Range<Int>) -> [UInt8] {
+    let rows = y.lowerBound * scale..<y.upperBound * scale
+    let columns = x.lowerBound * scale..<x.upperBound * scale
+    let rowBytes = 18 * scale * 4
+    return rows.flatMap { row in
+        columns.map { column in pixels[row * rowBytes + column * 4 + 3] }
+    }
+}
+
 func checkCountBadge() {
     let counts: [Int?] = [nil, -1, 0, 1, 9, 12, 99, 100]
     for scale in [1, 2] {
         let plain = badgePixels(HairpinIcon.image(), scale: scale)
         precondition(plain.contains { $0 != 0 }, "The icon must render something")
+        let withUpdate = badgePixels(HairpinIcon.image(updateAvailable: true), scale: scale)
+        let dot = alphaRegion(withUpdate, scale: scale, x: 14..<18, y: 0..<4)
+        let noDot = alphaRegion(plain, scale: scale, x: 14..<18, y: 0..<4)
+        precondition(dot != noDot, "Update availability must draw a visible dot")
         for update in [false, true] {
             let images = counts.map { HairpinIcon.image(updateAvailable: update, badge: $0) }
             precondition(images.allSatisfy { $0.isTemplate && $0.size == NSSize(width: 18, height: 18) })
@@ -29,6 +44,13 @@ func checkCountBadge() {
             precondition(pixels[0] == pixels[1] && pixels[0] == pixels[2], "Zero and negative counts draw no badge")
             precondition(pixels[0] != pixels[3] && pixels[3] != pixels[4] && pixels[4] != pixels[5])
             precondition(pixels[6] == pixels[7], "Counts past 99 draw 99")
+            // A template image is tinted by alpha alone: inside the dot there
+            // must be both solid pixels and the clear ones of the digits.
+            for index in 3...6 {
+                let inside = alphaRegion(pixels[index], scale: scale, x: 12..<15, y: 11..<15)
+                precondition(inside.contains { $0 >= 200 }, "The badge must be solid")
+                precondition(inside.contains { $0 <= 100 }, "The digits must be cut out of the badge")
+            }
             precondition(images[7].accessibilityDescription?.contains("100 hidden") == true)
             precondition(images[7].accessibilityDescription?.contains("update available") == update)
         }
