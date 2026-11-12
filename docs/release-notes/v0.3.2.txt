@@ -1,0 +1,5 @@
+Simpler update controls
+
+• The right-click menu now has two update options: Check for Updates and Update Automatically.
+• Turn on Update Automatically to download verified updates in the background and install them when Hairpin quits.
+• You can still review and install updates manually. Your existing update preferences are preserved.

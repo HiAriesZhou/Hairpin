@@ -1,0 +1,5 @@
+Clearer update notes
+
+• Update windows now show short, readable summaries of changes to Hairpin.
+• Release notes no longer include raw Markdown, development logs or website-only changes.
+• Checking for updates and automatic updates work as before. Your existing preferences are preserved.
