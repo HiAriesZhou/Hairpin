@@ -43,7 +43,7 @@
 /* Bodoni Moda (SIL OFL 1.1, fonts/OFL.txt), Latin subset, served from this site so visitors make no third-party requests. */
 @font-face { font-family: "Bodoni Moda"; font-style: normal; font-weight: 400 700; font-display: swap; src: url("fonts/BodoniModa.woff2") format("woff2"); }
 @font-face { font-family: "Bodoni Moda"; font-style: italic; font-weight: 400 700; font-display: swap; src: url("fonts/BodoniModa-Italic.woff2") format("woff2"); }
-/* Layout: one left-aligned column; the live menu bar runs full width as the hero; privacy reads as a care tag hung beside its text. */
+/* 布局：首屏左文右图，下接全宽菜单栏演示；隐私说明旁保留吊牌。 */
 :root {
   --paper: #FFF6EE;        /* icon cream, top */
   --blush: #FFE1E6;        /* icon cream, bottom */
@@ -129,12 +129,27 @@ p { margin: 0; }
 .lang:active { transform: scale(0.96); }
 
 /* Hero */
-.hero { padding-block: clamp(32px, 7vw, 72px) 28px; display: grid; gap: 22px; }
+.hero {
+  padding-block: clamp(28px, 5vw, 56px) 28px;
+  display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+  align-items: center; gap: clamp(24px, 4vw, 48px);
+}
+.hero-copy { display: grid; gap: 22px; min-width: 0; }
+.hero-art { position: relative; min-width: 0; isolation: isolate; pointer-events: none; }
+.hero-art::before {
+  content: ""; position: absolute; z-index: -1; inset: 4% -3% 0;
+  /* closest-side 让光晕在容器内完全淡出，深色主题下不露出矩形边缘。 */
+  background: radial-gradient(closest-side at 55% 45%, color-mix(in srgb, var(--satin) 20%, transparent), transparent);
+}
+/* 图片的透明通道已柔化侧边与下缘，直接融入两种主题的背景。 */
+.hero-art img { display: block; width: 100%; height: auto; }
 .hero h1 {
   font-size: var(--step-4); line-height: 0.98; font-style: italic; font-weight: 500; letter-spacing: -0.01em;
   max-width: 13ch;
 }
 .hero h1 em { font-style: normal; color: var(--satin-ink); }
+.hero h1:lang(zh-CN) { font-size: clamp(2.5rem, 5.6vw, 4rem); line-height: 1.1; }
+.hero h1:lang(zh-CN) em { display: block; }
 .lede { font-size: var(--step-1); line-height: 1.55; max-width: 34em; color: var(--ink-soft); }
 .lede strong { color: var(--ink); font-weight: 600; }
 .cta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; margin-top: 6px; }
@@ -318,6 +333,8 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
 
 @media (max-width: 760px) {
   .top a.plain { display: none; }
+  .hero { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .hero-art { width: min(100%, 360px); justify-self: center; }
   .traits, .privacy, .steps, .foot { grid-template-columns: minmax(0, 1fr); }
   .meta .sep { display: none; }
   .meta .star-link { display: flex; width: fit-content; margin-top: 4px; }
@@ -365,15 +382,20 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
 
 <main>
   <section class="wrap hero">
-    <p class="eyebrow" data-i18n="eyebrow">A menu bar app for MacBooks with a notch</p>
-    <h1 data-i18n="headline">Pin back what the <em>notch</em> hides.</h1>
-    <p class="lede" data-i18n="lede">When there are more menu bar icons than fit beside the notch, macOS quietly hides the rest. <strong>Hairpin notices, and keeps them in a small hairpin</strong> at the left end of your icons. Hover or click it, and they drop down in a row.</p>
-    <div class="cta">
-      <a class="btn" id="download" href="https://github.com/HiAriesZhou/Hairpin/releases/latest/download/Hairpin.dmg">
-        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2.5v9M5 8l4 4 4-4M3 15.5h12"/></svg>
-        <span data-i18n="download">Download for Mac</span>
-      </a>
-      <span class="meta"><span data-i18n="meta">Free · MIT · macOS 13+ · Apple silicon</span><span class="sep" aria-hidden="true"> · </span><a class="star-link" href="https://github.com/HiAriesZhou/Hairpin"><svg aria-hidden="true"><use href="#i-star"/></svg><span data-i18n="star">Pin a star on GitHub</span></a></span>
+    <div class="hero-copy">
+      <p class="eyebrow" data-i18n="eyebrow">A menu bar app for MacBooks with a notch</p>
+      <h1 data-i18n="headline">Pin back what the <em>notch</em> hides.</h1>
+      <p class="lede" data-i18n="lede">When there are more menu bar icons than fit beside the notch, macOS quietly hides the rest. <strong>Hairpin notices, and keeps them in a small hairpin</strong> at the left end of your icons. Hover or click it, and they drop down in a row.</p>
+      <div class="cta">
+        <a class="btn" id="download" href="https://github.com/HiAriesZhou/Hairpin/releases/latest/download/Hairpin.dmg">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2.5v9M5 8l4 4 4-4M3 15.5h12"/></svg>
+          <span data-i18n="download">Download for Mac</span>
+        </a>
+        <span class="meta"><span data-i18n="meta">Free · MIT · macOS 13+ · Apple silicon</span><span class="sep" aria-hidden="true"> · </span><a class="star-link" href="https://github.com/HiAriesZhou/Hairpin"><svg aria-hidden="true"><use href="#i-star"/></svg><span data-i18n="star">Pin a star on GitHub</span></a></span>
+      </div>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <img src="mascot.webp" srcset="mascot-small.webp 480w, mascot.webp 960w" sizes="(max-width: 760px) min(360px, calc(100vw - 32px)), (max-width: 1120px) 42vw, 460px" alt="" width="960" height="1016" fetchpriority="high" decoding="async">
     </div>
   </section>
 
