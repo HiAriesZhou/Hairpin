@@ -357,7 +357,8 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
   transition: border-color 160ms, background-color 160ms;
 }
 .product:hover { border-color: color-mix(in srgb, var(--satin-ink) 46%, var(--rule)); background: var(--tag); }
-.product-mark { width: 40px; height: 40px; border-radius: 10px; box-shadow: 0 0 0 1px var(--rule); }
+.product-mark { width: 40px; height: 40px; border-radius: 10px; object-fit: contain; }
+.product-mark--xtoc { background: #fff; padding: 4px; }
 .product-copy { display: grid; grid-template-rows: auto 1fr auto; gap: 6px; min-width: 0; height: 100%; }
 .product-name {
   display: flex; align-items: center; gap: 6px; color: var(--ink); font-weight: 600; line-height: 1.3;
@@ -566,22 +567,22 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
           </a>
         </li>
         <li>
-          <a class="product" id="works-ba" href="https://www.bookmarkassistant.com/">
-            <img class="product-mark" src="products/bookmark-assistant.svg" alt="" width="40" height="40">
-            <span class="product-copy">
-              <span class="product-name">Bookmark Assistant<svg aria-hidden="true"><use href="#i-out"/></svg></span>
-              <span class="product-desc" data-i18n="worksBa">Organize your bookmarks, and find them again.</span>
-              <span class="product-meta" data-i18n="worksBaMeta">Chrome extension</span>
-            </span>
-          </a>
-        </li>
-        <li>
           <a class="product" href="https://xtoc.arieszhou.com/">
-            <img class="product-mark" src="products/xtoc.png" alt="" width="40" height="40">
+            <img class="product-mark product-mark--xtoc" src="products/xtoc.png" alt="" width="40" height="40">
             <span class="product-copy">
               <span class="product-name">XTOC<svg aria-hidden="true"><use href="#i-out"/></svg></span>
               <span class="product-desc" data-i18n="worksXtoc">Add a table of contents to long posts on X, and keep useful lines.</span>
               <span class="product-meta" data-i18n="worksXtocMeta">Browser extension</span>
+            </span>
+          </a>
+        </li>
+        <li>
+          <a class="product" href="https://github.com/HiAriesZhou/Gezi">
+            <img class="product-mark" src="products/gezi.svg" alt="" width="40" height="40">
+            <span class="product-copy">
+              <span class="product-name">Gezi<svg aria-hidden="true"><use href="#i-out"/></svg></span>
+              <span class="product-desc" data-i18n="worksGezi">Read Markdown, right in your terminal.</span>
+              <span class="product-meta" data-i18n="worksGeziMeta">Terminal · macOS</span>
             </span>
           </a>
         </li>
@@ -657,7 +658,7 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
       navDl: "Download", navSrc: "Source code", aFoot: "Links",
       worksTitle: "More from the maker", worksAll: "All projects",
       worksHowler: "Capture part of the screen and ask.", worksHowlerMeta: "macOS",
-      worksBa: "Organize your bookmarks, and find them again.", worksBaMeta: "Chrome extension",
+      worksGezi: "Read Markdown, right in your terminal.", worksGeziMeta: "Terminal · macOS",
       worksXtoc: "Add a table of contents to long posts on X, and keep useful lines.", worksXtocMeta: "Browser extension",
       license: 'Open source under the <a href="https://github.com/HiAriesZhou/Hairpin/blob/main/LICENSE">MIT License</a>.',
       aDemo: "Interactive demo", aRow: "Hidden icons", aLess: "Fewer icons", aMore: "More icons", aTag: "Permissions summary",
@@ -700,7 +701,7 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
       navDl: "下载", navSrc: "源代码", aFoot: "链接",
       worksTitle: "我做的其他工具", worksAll: "全部作品",
       worksHowler: "截取屏幕一角，随时提问。", worksHowlerMeta: "macOS",
-      worksBa: "整理书签，找回收藏。", worksBaMeta: "Chrome 扩展",
+      worksGezi: "在终端里，读得自在。", worksGeziMeta: "终端工具 · macOS",
       worksXtoc: "给 X 长文加目录，留下有用的段落。", worksXtocMeta: "浏览器扩展",
       license: '基于 <a href="https://github.com/HiAriesZhou/Hairpin/blob/main/LICENSE">MIT 协议</a>开源。',
       aDemo: "交互演示", aRow: "被藏起来的图标", aLess: "减少图标", aMore: "增加图标", aTag: "权限摘要",
@@ -728,7 +729,6 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
     $("lang").textContent = t.switchTo;
     $("lang").lang = lang === "zh" ? "en" : "zh-CN";
     $("works-all").href = lang === "zh" ? "https://www.arieszhou.com/zh/building" : "https://www.arieszhou.com/building";
-    $("works-ba").href = lang === "zh" ? "https://www.bookmarkassistant.com/zh-CN" : "https://www.bookmarkassistant.com/";
     render();
   }
 
