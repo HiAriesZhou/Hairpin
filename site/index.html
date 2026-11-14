@@ -106,7 +106,8 @@ body {
 a { color: var(--satin-ink); text-underline-offset: 3px; text-decoration-thickness: 1px; }
 a:hover { text-decoration-thickness: 2px; }
 :focus-visible { outline: 2px solid var(--satin); outline-offset: 3px; border-radius: 4px; }
-.btn:focus-visible, .lang:focus-visible, .star-btn:focus-visible { border-radius: 999px; }
+.btn:focus-visible, .lang:focus-visible, .star-btn:focus-visible, .works-all:focus-visible { border-radius: 999px; }
+.product:focus-visible { border-radius: 16px; }
 h1, h2, h3 { font-family: var(--display); font-weight: 500; text-wrap: balance; margin: 0; }
 p { margin: 0; }
 .eyebrow {
@@ -302,8 +303,11 @@ section.band { padding-block: 72px; border-top: 1px solid var(--rule); }
 .limits li::before { content: ""; position: absolute; left: 2px; top: 0.72em; width: 8px; height: 1px; background: var(--ink-soft); }
 
 footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var(--ink-soft); }
-.foot { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 36px 72px; align-items: start; }
-.foot-main { display: grid; gap: 14px; justify-items: start; min-width: 0; }
+.foot {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 36px 72px; align-items: start;
+  grid-template-areas: "main nav" "works works" "legal legal";
+}
+.foot-main { grid-area: main; display: grid; gap: 14px; justify-items: start; min-width: 0; }
 .foot .sign { font: italic 500 var(--step-2)/1 var(--display); color: var(--ink); }
 .credit { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .heart { width: 15px; height: 15px; color: var(--satin); }
@@ -319,7 +323,7 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
 .star-btn svg { width: 15px; height: 15px; color: var(--satin); }
 .star-btn:hover { border-color: var(--satin-ink); }
 .star-btn:active { transform: scale(0.97); }
-.foot-nav { display: grid; min-width: 15rem; margin-top: 4px; border-bottom: 1px solid var(--rule); }
+.foot-nav { display: grid; min-width: 15rem; margin-top: 4px; border-bottom: 1px solid var(--rule); grid-area: nav; }
 .foot-nav a {
   display: flex; align-items: center; justify-content: space-between; gap: 32px; padding: 11px 2px;
   border-top: 1px solid var(--rule); color: var(--ink); text-decoration: none; transition: color 160ms;
@@ -328,14 +332,50 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
 .foot-nav a:hover { color: var(--satin-ink); }
 .foot-nav a:hover svg { color: var(--satin-ink); transform: translate(2px, -2px); }
 .foot-nav a.dl:hover svg { transform: translateY(2px); }
-.foot-legal { grid-column: 1 / -1; padding-top: 22px; border-top: 1px solid var(--rule); font-size: var(--step--1); }
+.foot-legal { grid-area: legal; padding-top: 22px; border-top: 1px solid var(--rule); font-size: var(--step--1); }
 .foot-legal a { color: var(--ink-soft); }
+.works { grid-area: works; display: grid; gap: 14px; margin-top: 12px; }
+.works-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px 16px; }
+.works h2 {
+  font: 500 0.75rem/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft);
+}
+.works-all {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  color: var(--ink-soft); text-decoration: none; font-size: var(--step--1);
+}
+.works-all svg { width: 13px; height: 13px; transition: transform 160ms ease-out, color 160ms; }
+.works-all:hover { color: var(--satin-ink); }
+.works-all:hover svg { transform: translate(2px, -2px); }
+.works-list {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;
+  margin: 0; padding: 0; list-style: none;
+}
+.product {
+  display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 14px; align-items: start;
+  height: 100%; padding: 20px 16px; border: 1px solid var(--rule); border-radius: 16px;
+  background: transparent; color: inherit; text-decoration: none;
+  transition: border-color 160ms, background-color 160ms;
+}
+.product:hover { border-color: color-mix(in srgb, var(--satin-ink) 46%, var(--rule)); background: var(--tag); }
+.product-mark { width: 40px; height: 40px; border-radius: 10px; box-shadow: 0 0 0 1px var(--rule); }
+.product-copy { display: grid; grid-template-rows: auto 1fr auto; gap: 6px; min-width: 0; height: 100%; }
+.product-name {
+  display: flex; align-items: center; gap: 6px; color: var(--ink); font-weight: 600; line-height: 1.3;
+}
+.product-name svg { width: 13px; height: 13px; flex: none; color: var(--ink-soft); transition: transform 160ms ease-out, color 160ms; }
+.product:hover .product-name, .product:hover .product-name svg { color: var(--satin-ink); }
+.product:hover .product-name svg { transform: translate(2px, -2px); }
+.product-desc { color: var(--ink-soft); font-size: var(--step--1); line-height: 1.45; }
+.product-meta { color: var(--ink-soft); font-size: 0.75rem; line-height: 1.3; margin-top: 6px; }
 
 @media (max-width: 760px) {
   .top a.plain { display: none; }
   .hero { grid-template-columns: minmax(0, 1fr); gap: 16px; }
   .hero-art { width: min(100%, 360px); justify-self: center; }
   .traits, .privacy, .steps, .foot { grid-template-columns: minmax(0, 1fr); }
+  .foot { grid-template-areas: "main" "nav" "works" "legal"; }
+  .works { margin-top: 0; }
+  .works-list { grid-template-columns: minmax(0, 1fr); }
   .meta .sep { display: none; }
   .meta .star-link { display: flex; width: fit-content; margin-top: 4px; }
   .privacy { gap: 40px; }
@@ -509,6 +549,44 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
       <a href="https://github.com/HiAriesZhou/Hairpin/blob/main/docs/how-it-works.md"><span data-i18n="navHow">How it works</span><svg aria-hidden="true"><use href="#i-out"/></svg></a>
       <a href="https://github.com/HiAriesZhou/Hairpin"><span data-i18n="navSrc">Source code</span><svg aria-hidden="true"><use href="#i-out"/></svg></a>
     </nav>
+    <section class="works" aria-labelledby="works-title">
+      <div class="works-head">
+        <h2 id="works-title" data-i18n="worksTitle">More from the maker</h2>
+        <a class="works-all" id="works-all" href="https://www.arieszhou.com/building"><span data-i18n="worksAll">All projects</span><svg aria-hidden="true"><use href="#i-out"/></svg></a>
+      </div>
+      <ul class="works-list">
+        <li>
+          <a class="product" href="https://howler.arieszhou.com/">
+            <img class="product-mark" src="products/howler.png" alt="" width="40" height="40">
+            <span class="product-copy">
+              <span class="product-name">Howler<svg aria-hidden="true"><use href="#i-out"/></svg></span>
+              <span class="product-desc" data-i18n="worksHowler">Capture part of the screen and ask.</span>
+              <span class="product-meta" data-i18n="worksHowlerMeta">macOS</span>
+            </span>
+          </a>
+        </li>
+        <li>
+          <a class="product" id="works-ba" href="https://www.bookmarkassistant.com/">
+            <img class="product-mark" src="products/bookmark-assistant.svg" alt="" width="40" height="40">
+            <span class="product-copy">
+              <span class="product-name">Bookmark Assistant<svg aria-hidden="true"><use href="#i-out"/></svg></span>
+              <span class="product-desc" data-i18n="worksBa">Organize your bookmarks, and find them again.</span>
+              <span class="product-meta" data-i18n="worksBaMeta">Chrome extension</span>
+            </span>
+          </a>
+        </li>
+        <li>
+          <a class="product" href="https://xtoc.arieszhou.com/">
+            <img class="product-mark" src="products/xtoc.png" alt="" width="40" height="40">
+            <span class="product-copy">
+              <span class="product-name">XTOC<svg aria-hidden="true"><use href="#i-out"/></svg></span>
+              <span class="product-desc" data-i18n="worksXtoc">Add a table of contents to long posts on X, and keep useful lines.</span>
+              <span class="product-meta" data-i18n="worksXtocMeta">Browser extension</span>
+            </span>
+          </a>
+        </li>
+      </ul>
+    </section>
     <p class="foot-legal" data-i18n="license">Open source under the <a href="https://github.com/HiAriesZhou/Hairpin/blob/main/LICENSE">MIT License</a>.</p>
   </div>
 </footer>
@@ -577,6 +655,10 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
       credit: `Built with ${HEART("love")} by ${AUTHOR}`,
       invite: "If Hairpin keeps your menu bar tidy, pin a star on its GitHub repo so other notch owners can find it.",
       navDl: "Download", navSrc: "Source code", aFoot: "Links",
+      worksTitle: "More from the maker", worksAll: "All projects",
+      worksHowler: "Capture part of the screen and ask.", worksHowlerMeta: "macOS",
+      worksBa: "Organize your bookmarks, and find them again.", worksBaMeta: "Chrome extension",
+      worksXtoc: "Add a table of contents to long posts on X, and keep useful lines.", worksXtocMeta: "Browser extension",
       license: 'Open source under the <a href="https://github.com/HiAriesZhou/Hairpin/blob/main/LICENSE">MIT License</a>.',
       aDemo: "Interactive demo", aRow: "Hidden icons", aLess: "Fewer icons", aMore: "More icons", aTag: "Permissions summary",
       releases: "Release notes", switchTo: "中文", clock: "Wed Oct 28  9:41",
@@ -616,6 +698,10 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
       credit: `由 ${AUTHOR} 用 ${HEART("爱心")} 制作`,
       invite: "要是 Hairpin 帮你把菜单栏收拾利落了，就去 GitHub 给它别一颗星，让更多刘海屏用户找到它。",
       navDl: "下载", navSrc: "源代码", aFoot: "链接",
+      worksTitle: "我做的其他工具", worksAll: "全部作品",
+      worksHowler: "截取屏幕一角，随时提问。", worksHowlerMeta: "macOS",
+      worksBa: "整理书签，找回收藏。", worksBaMeta: "Chrome 扩展",
+      worksXtoc: "给 X 长文加目录，留下有用的段落。", worksXtocMeta: "浏览器扩展",
       license: '基于 <a href="https://github.com/HiAriesZhou/Hairpin/blob/main/LICENSE">MIT 协议</a>开源。',
       aDemo: "交互演示", aRow: "被藏起来的图标", aLess: "减少图标", aMore: "增加图标", aTag: "权限摘要",
       releases: "更新日志", switchTo: "EN", clock: "10月28日 周三  9:41",
@@ -641,6 +727,8 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
     document.querySelectorAll("[data-i18n-aria]").forEach(el => el.setAttribute("aria-label", t[el.dataset.i18nAria]));
     $("lang").textContent = t.switchTo;
     $("lang").lang = lang === "zh" ? "en" : "zh-CN";
+    $("works-all").href = lang === "zh" ? "https://www.arieszhou.com/zh/building" : "https://www.arieszhou.com/building";
+    $("works-ba").href = lang === "zh" ? "https://www.bookmarkassistant.com/zh-CN" : "https://www.bookmarkassistant.com/";
     render();
   }
 
