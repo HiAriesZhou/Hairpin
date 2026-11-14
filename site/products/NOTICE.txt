@@ -3,12 +3,18 @@ Product icons used in the Hairpin website footer.
 howler.png is the Howler app icon.
 Copyright (c) 2026 AriesZhou
 Source: https://github.com/HiAriesZhou/Howler
+Website asset: https://howler.arieszhou.com/assets/icon.png
 
 xtoc.png is the XTOC app icon.
 Copyright (c) 2026 Aries
 Source: https://github.com/HiAriesZhou/xtoc
+Website asset: https://xtoc.arieszhou.com/logo.png
 
-Both icons remain under the MIT License:
+gezi.svg is the official Gezi avatar, copied without modification.
+Copyright (c) 2026 AriesZhou
+Source: https://github.com/HiAriesZhou/Gezi/blob/main/assets/brand/avatar.svg
+
+All three icons remain under the MIT License:
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,5 +33,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-bookmark-assistant.svg is an original mark drawn for this page. It is not the Bookmark Assistant logo.
