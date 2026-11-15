@@ -1,0 +1,10 @@
+The X and GitHub symbols in index.html are from Simple Icons, released
+under CC0 1.0 Universal:
+https://github.com/simple-icons/simple-icons/blob/develop/LICENSE.md
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Sources:
+https://github.com/simple-icons/simple-icons/blob/develop/icons/x.svg
+https://github.com/simple-icons/simple-icons/blob/develop/icons/github.svg
+
+Brand names and trademarks remain the property of their respective owners.
