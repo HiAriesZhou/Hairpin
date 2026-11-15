@@ -1,0 +1,3 @@
+Smaller downloads
+
+• Reduced the download and installed app size by removing unused packaging content.
