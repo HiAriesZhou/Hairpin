@@ -323,21 +323,24 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
 .foot-download { grid-area: download; align-self: center; justify-self: end; }
 .contact { grid-area: contact; display: grid; gap: 20px; padding-top: 32px; border-top: 1px solid var(--rule); }
 .contact h2 { font-size: var(--step-2); line-height: 1.2; color: var(--ink); }
-.contact-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.contact-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
 .contact-card {
   display: grid; grid-template-columns: 44px minmax(0, 1fr) 18px; align-items: start; gap: 16px;
-  height: 100%; padding: 24px; border: 1px solid var(--rule); border-radius: 16px;
+  height: 100%; padding: 20px 16px; border: 1px solid var(--rule); border-radius: 16px;
   color: var(--ink); text-decoration: none; transition: background-color 160ms, border-color 160ms;
 }
-.contact-card:hover { background: var(--tag); border-color: var(--satin-ink); }
-.contact-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--tag); }
-.contact-icon svg { width: 23px; height: 23px; }
+.contact-card:is(:hover, :focus-visible) { background: var(--tag); border-color: var(--satin-ink); }
+.contact-icon { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--tag); overflow: hidden; }
+.contact-icon svg { width: 23px; height: 23px; transition: opacity 180ms ease, transform 180ms ease; }
+.contact-avatar { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(0.9); transition: opacity 180ms ease, transform 180ms ease; }
+.contact-card:is(:hover, :focus-visible) .contact-icon svg { opacity: 0; transform: scale(0.85); }
+.contact-card:is(:hover, :focus-visible) .contact-avatar { opacity: 1; transform: scale(1); }
 .contact-copy { display: grid; gap: 3px; min-width: 0; }
 .contact-name { font-size: var(--step-1); font-weight: 600; line-height: 1.3; }
 .contact-handle { color: var(--ink-soft); font-size: var(--step--1); overflow-wrap: anywhere; }
 .contact-desc { margin-top: 9px; color: var(--ink-soft); font-size: var(--step--1); line-height: 1.5; }
 .contact-arrow { width: 18px; height: 18px; margin-top: 3px; color: var(--ink-soft); transition: transform 160ms, color 160ms; }
-.contact-card:hover .contact-arrow { transform: translate(2px, -2px); color: var(--satin-ink); }
+.contact-card:is(:hover, :focus-visible) .contact-arrow { transform: translate(2px, -2px); color: var(--satin-ink); }
 .foot-legal { grid-area: legal; padding-top: 22px; border-top: 1px solid var(--rule); font-size: var(--step--1); }
 .foot-legal a { color: var(--ink-soft); }
 .works { grid-area: works; display: grid; gap: 14px; }
@@ -558,7 +561,7 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
       <ul class="contact-list">
         <li>
           <a class="contact-card" href="https://x.com/AriesZhou">
-            <span class="contact-icon"><svg aria-hidden="true"><use href="#i-x"/></svg></span>
+            <span class="contact-icon"><svg aria-hidden="true"><use href="#i-x"/></svg><img class="contact-avatar" src="avatar.jpg" alt="" width="44" height="44"></span>
             <span class="contact-copy">
               <span class="contact-name">X</span>
               <span class="contact-handle">@AriesZhou</span>
@@ -569,7 +572,7 @@ footer { border-top: 1px solid var(--rule); padding-block: 56px 40px; color: var
         </li>
         <li>
           <a class="contact-card" href="https://github.com/HiAriesZhou">
-            <span class="contact-icon"><svg aria-hidden="true"><use href="#i-github"/></svg></span>
+            <span class="contact-icon"><svg aria-hidden="true"><use href="#i-github"/></svg><img class="contact-avatar" src="avatar.jpg" alt="" width="44" height="44"></span>
             <span class="contact-copy">
               <span class="contact-name">GitHub</span>
               <span class="contact-handle">HiAriesZhou</span>
