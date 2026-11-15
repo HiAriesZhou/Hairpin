@@ -1,10 +1,8 @@
 [English](README.md) · **简体中文**
 
 <p align="center">
-  <img src="https://hairpin.arieszhou.com/mascot-small.webp" width="180" alt="Hairpin mascot with pink hair and a bow-shaped hairpin">
+  <img src="https://hairpin.arieszhou.com/readme-banner.png" width="100%" alt="Hairpin：让刘海挡住的图标随时点得到。左侧为应用 logo，右侧为粉发 IP 形象。">
 </p>
-
-<h1 align="center">Hairpin</h1>
 
 <p align="center">让被 MacBook 刘海挡住的菜单栏图标，随时点得到。</p>
 

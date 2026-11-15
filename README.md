@@ -1,10 +1,8 @@
 **English** · [简体中文](README.zh-CN.md)
 
 <p align="center">
-  <img src="https://hairpin.arieszhou.com/mascot-small.webp" width="180" alt="Hairpin mascot with pink hair and a bow-shaped hairpin">
+  <img src="https://hairpin.arieszhou.com/readme-banner.png" width="100%" alt="Hairpin: Hidden by the notch. Back within reach. App logo on the left and pink-haired mascot on the right.">
 </p>
-
-<h1 align="center">Hairpin</h1>
 
 <p align="center">A tiny macOS app that brings hidden menu bar icons back within reach.</p>
 
