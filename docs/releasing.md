@@ -83,3 +83,16 @@ keep the authored notes in `docs/release-notes/`. The generated feed is
 `.build/update-feed/appcast.xml`. `scripts/ValidateUpdateFeed.swift` verifies
 Ed25519 feed/archive signatures, version, build monotonicity, download URL and
 payload length with the public key and no private-key access.
+
+## Distribution size and debug symbols
+
+`bundle.sh` preserves `.build/Hairpin.dSYM` before stripping debug and local
+symbols from the distributed executable. Keep that dSYM with the corresponding
+build for crash symbolication; its UUID must match the executable. CI retains it
+as a separate artifact, outside the downloadable ZIP and DMG.
+
+The embedded Sparkle framework and its helpers retain only the architectures
+present in the app. Framework headers and module metadata are removed before
+inside-out signing. Runtime resources, localizations, licenses, helpers and
+sandbox entitlements remain included. `scripts/test-updates.sh` checks the
+architecture and symbol UUIDs and loads the packaged framework at runtime.

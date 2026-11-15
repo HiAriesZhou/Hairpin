@@ -41,13 +41,36 @@ BIN_DIR="$(swift build -c release --show-bin-path)"
 echo "==> Assembling $APP"
 rm -rf "$APP" "$ZIP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+# Keep crash-symbolication data outside the distributed app before stripping.
+SYMBOLS="$ROOT/.build/Hairpin.dSYM"
+rm -rf "$SYMBOLS"
+dsymutil "$BIN_DIR/Hairpin" -o "$SYMBOLS"
 cp "$BIN_DIR/Hairpin" "$APP/Contents/MacOS/Hairpin"
+strip -S -x "$APP/Contents/MacOS/Hairpin"
 cp "$ROOT/LICENSE" "$APP/Contents/Resources/LICENSE"
 # SwiftPM links the binary framework, but a distributable .app must embed it.
 SPARKLE="$ROOT/.build/artifacts/sparkle/Sparkle"
 mkdir -p "$APP/Contents/Frameworks"
 ditto "$SPARKLE/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework" \
       "$APP/Contents/Frameworks/Sparkle.framework"
+# Ship only architectures present in the app, including Sparkle's helpers.
+APP_ARCHS=( $(lipo -archs "$APP/Contents/MacOS/Hairpin") )
+FRAMEWORK="$APP/Contents/Frameworks/Sparkle.framework"
+while IFS= read -r -d '' BINARY; do
+  if file -b "$BINARY" | grep -q 'Mach-O'; then
+    EXTRACT_FLAGS=()
+    for ARCH in "${APP_ARCHS[@]}"; do
+      EXTRACT_FLAGS+=(-extract "$ARCH")
+    done
+    lipo "$BINARY" "${EXTRACT_FLAGS[@]}" -output "$BINARY.trimmed"
+    chmod "$(stat -f '%Lp' "$BINARY")" "$BINARY.trimmed"
+    mv "$BINARY.trimmed" "$BINARY"
+  fi
+done < <(find "$FRAMEWORK/Versions/B" -type f -print0)
+# These are compile-time metadata, including symlinks at the framework root.
+for DIRECTORY in Headers PrivateHeaders Modules; do
+  rm -rf "$FRAMEWORK/$DIRECTORY" "$FRAMEWORK/Versions/B/$DIRECTORY"
+done
 cp "$SPARKLE/LICENSE" "$APP/Contents/Resources/Sparkle-LICENSE"
 PUBLIC_KEY="$(cat "$ROOT/scripts/sparkle-public-key.txt")"
 if [[ ! "$PUBLIC_KEY" =~ ^[A-Za-z0-9+/]{43}=$ ]]; then
