@@ -1,72 +1,79 @@
-# Hairpin
+**English** · [简体中文](README.zh-CN.md)
 
-<p align="center"><img src="docs/icon.png" width="128" height="128" alt="Hairpin's icon: a pink bow on a bobby pin"></p>
+<p align="center">
+  <img src="https://hairpin.arieszhou.com/mascot-small.webp" width="180" alt="Hairpin mascot with pink hair and a bow-shaped hairpin">
+</p>
+
+<h1 align="center">Hairpin</h1>
+
+<p align="center">A tiny macOS app that brings hidden menu bar icons back within reach.</p>
+
+<p align="center">
+  <a href="https://github.com/HiAriesZhou/Hairpin/releases/latest/download/Hairpin.dmg"><strong>Download Hairpin</strong></a> ·
+  <a href="https://hairpin.arieszhou.com/">Try the interactive demo</a>
+</p>
 
 <p align="center">
   <a href="https://github.com/HiAriesZhou/Hairpin/releases/latest"><img src="https://img.shields.io/github/v/release/HiAriesZhou/Hairpin" alt="Latest release"></a>
   <a href="https://github.com/HiAriesZhou/Hairpin/actions/workflows/ci.yml"><img src="https://github.com/HiAriesZhou/Hairpin/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/macOS-13%2B-blue" alt="macOS 13 or later">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/HiAriesZhou/Hairpin" alt="MIT License"></a>
 </p>
 
-A tiny macOS menu bar app that keeps the icons hidden behind the MacBook notch within reach.
-一个极简的 macOS 菜单栏小工具：把被 MacBook 刘海挡住的菜单栏图标收起来，随时点得到。
+**macOS 13+ · Apple silicon · Free and open source**
 
-**[Download Hairpin.dmg](https://github.com/HiAriesZhou/Hairpin/releases/latest/download/Hairpin.dmg)** · [hairpin.arieszhou.com](https://hairpin.arieszhou.com) · [English](#english) · [中文](#中文)
+## What it does
 
-> Formerly **NotchBar**. If you cloned the old repository: `git remote set-url origin https://github.com/HiAriesZhou/Hairpin.git`
+When menu bar icons no longer fit beside the notch, Hairpin finds the hidden items and makes them available in a small row. No dragging icons into groups or setting individual visibility rules.
 
----
+- **Hover or click to open.** Hover for half a second or click the hairpin, then click an item to open its menu.
+- **Follows your menu bar.** The hidden-item list updates as you switch apps and icons come and go.
+- **Stays out of the way.** No separate pin when nothing is hidden. When Hairpin's own icon is visible, it serves as the pin.
 
-## English
+## Install
 
-### What it does
+1. [Download Hairpin.dmg](https://github.com/HiAriesZhou/Hairpin/releases/latest/download/Hairpin.dmg), open it and drag Hairpin to Applications.
+2. Open Hairpin and enable **Accessibility** when prompted.
+3. Hover over or click the hairpin to reach hidden items.
 
-When there are more menu bar icons than fit beside the notch, macOS quietly hides the rest. Hairpin notices, and puts a small hairpin at the left end of your menu bar icons that holds the hidden ones.
+Releases are Developer ID signed and notarized by Apple. A ZIP is also available on the [Releases page](https://github.com/HiAriesZhou/Hairpin/releases/latest).
 
-- **Hover or click the hairpin** and the hidden icons drop down in a row. Click one to open its menu.
-- **Only there when needed.** With nothing hidden, there's no hairpin. While icons are hidden, the hairpin's mark shows how many.
-- **Keeps up** as you switch apps (long app menus included), as icons come and go, and as the menu bar hides itself or goes full screen.
-- **Looks right:** icons as they appear in your menu bar, in a Liquid Glass row on macOS 26.
+Real menu bar icon images require macOS 14+ and optional Screen Recording permission. The Liquid Glass row requires macOS 26; earlier versions use a blur.
 
-### Install
+## Permissions and privacy
 
-1. Download [**Hairpin.dmg**](https://github.com/HiAriesZhou/Hairpin/releases/latest/download/Hairpin.dmg) from the latest release, open it and drag Hairpin onto Applications. (`Hairpin.zip` on the [Releases](https://github.com/HiAriesZhou/Hairpin/releases/latest) page holds the same app.)
-2. Open Hairpin. Releases are signed with a Developer ID and notarized by Apple, so it opens without a warning.
-3. Turn on **Accessibility** for Hairpin when it asks.
+- **Accessibility (required):** reads menu bar items and clicks the real item when you select it.
+- **Screen Recording (optional, macOS 14+):** captures icon appearances from the menu bar strip. Images stay in memory.
 
-Requires macOS 13 or later on Apple silicon. Real icon looks need macOS 14; the Liquid Glass row needs macOS 26.
+**Hairpin works without Screen Recording.** It uses each app's own icon instead; Apple's items and apps without an icon use an initial. To enable real icon images, choose **Show Real Icons…** in Hairpin's menu. Items that have never been visible also use the fallback.
 
-### Permissions and privacy
+Hairpin connects to GitHub only to check for and download updates. It sends no menu bar data, screenshots, app lists, analytics or system profile. GitHub receives ordinary network information, including your IP address and app version. Hairpin does not log keystrokes or read app-window contents. With Screen Recording enabled, it captures only the menu bar strip and reads menu bar item window names.
 
-- **Accessibility (required)** lets Hairpin read other apps' menu bar icons and click them for you. Turn it on in System Settings › Privacy & Security › Accessibility.
-- **Screen Recording (optional, macOS 14+)** lets Hairpin show icons as they look and tell exactly which app each belongs to. Without it, and for icons that have never been visible, the row shows the app's own icon instead (Apple's icons show an initial in a rounded square). Grant it from **Show Real Icons…** in Hairpin's menu.
+## Updates
 
-Hairpin connects to GitHub only to check for and download updates. It sends no menu bar data, screenshots, app lists, analytics or system profile. GitHub receives ordinary network information, including your IP address and the app version in the update request. Hairpin doesn't log keystrokes or read app window contents. With Screen Recording it captures only the menu bar strip, to cut out icon shapes, and reads menu bar item windows' names; the shapes stay in memory.
+By default, Hairpin checks daily and shows a small dot when an update is available. Right-click the pin and choose **Check for Updates…** to review and install it.
 
-### Updates
+**Update Automatically** is off by default. Enabling it downloads verified updates in the background and installs them when Hairpin quits. Turning it off stops automatic downloads; daily and manual checks remain available. Existing preferences are preserved. Feeds and update packages are signature-verified by Sparkle.
 
-Hairpin checks once a day by default and marks its pin with a small dot when a version is available. Right-click the pin and choose **Check for Updates…** (or the available version) to review and install it.
-
-**Update Automatically** is off by default. Turning it on downloads verified updates in the background and installs them when Hairpin quits. Turning it off stops those downloads; the daily check remains, and manual checks still work. You can also install and relaunch from the update window. Updates use Sparkle with signed feeds and signed installation packages. Users of 0.2.3 and earlier need to install an updater-capable release manually once.
-
-### Using Hairpin
+<details>
+<summary>Usage and settings</summary>
 
 - **Open the row:** rest the pointer on the hairpin for half a second (it closes when you move away), or click it (it stays until you click elsewhere, click the hairpin again or press Escape).
 - **Order:** Apple's icons on the right, the others by when their app launched, the earliest rightmost, as in the menu bar.
 - **Hairpin's menu:** click Hairpin's own icon (right-click it while it's the hairpin), or right-click the separate pin, for the hidden-icon count, permissions, hover/login settings, update controls and **Quit Hairpin**.
 - **Can't find Hairpin?** Open Hairpin.app again while it's running. The hidden icons drop down at the pointer, or the menu appears if none are hidden.
 
-### Limitations
+</details>
+
+## Known limitations
 
 - Hairpin doesn't move icons; it clicks the real one. Some apps open their menu by the notch, where it was hidden, and a few ignore the click or open a window instead.
 - An icon's look is captured while it's shown, so anything that changes (unread counts, battery level) shows as it last looked.
 - With several displays, only the notched one (or the primary one) counts.
-- Apple silicon only.
 
 [How Hairpin works](docs/how-it-works.md) explains the details.
 
-### Build from source
+<details>
+<summary>Build from source</summary>
 
 ```sh
 swift test               # unit tests
@@ -77,73 +84,23 @@ scripts/dmg.sh           # then Hairpin.dmg
 
 Needs Xcode or the Command Line Tools. An ad hoc build gets new privacy grants after every rebuild; `SIGN_IDENTITY="Apple Development" scripts/bundle.sh` signs it with a stable identity so they carry over.
 
----
+</details>
 
-## 中文
+<details>
+<summary>Upgrading from an older version or NotchBar</summary>
 
-### 它做什么
+Users of 0.2.3 and earlier need to download a current release manually once to get in-app updates.
 
-菜单栏图标多到刘海旁边放不下时，macOS 会悄悄把放不下的藏起来。Hairpin 会注意到这一点，在菜单栏图标的最左端放一个小发卡，被藏起来的图标都收在里面。
-
-- **悬停或点击发卡**，被藏起来的图标会在下方展开成一行；点一个就打开它的菜单。
-- **只在需要时出现**：没有图标被藏起来时，发卡不会出现。有图标被藏起来时，发卡上会显示数量。
-- **随时跟上**：切换应用（包括菜单很长的应用）、图标增减、菜单栏自动隐藏或进入全屏时，都会自动调整。
-- **样子一致**：显示的就是图标在菜单栏上的样子；在 macOS 26 上用 Liquid Glass 效果。
-
-### 安装
-
-1. 下载最新正式版的 [**Hairpin.dmg**](https://github.com/HiAriesZhou/Hairpin/releases/latest/download/Hairpin.dmg)，打开后把 Hairpin 拖到「Applications」。（[Releases](https://github.com/HiAriesZhou/Hairpin/releases/latest) 页面上的 `Hairpin.zip` 里是同一个 app。）
-2. 打开 Hairpin。发布版使用 Developer ID 签名并经过 Apple 公证，可以直接打开，不会有安全提示。
-3. 按提示为 Hairpin 打开「辅助功能」权限。
-
-需要 macOS 13 或更高版本、Apple 芯片。显示图标的真实样子需要 macOS 14；Liquid Glass 效果需要 macOS 26。
-
-### 权限与隐私
-
-- **辅助功能（必需）**：用来读取其他应用的菜单栏图标，并替你点击它们。在「系统设置 › 隐私与安全性 › 辅助功能」里打开。
-- **屏幕录制（可选，macOS 14 及以上）**：用来显示图标的真实样子，并准确识别每个图标属于哪个应用。不授权时，或图标从未显示过时，会使用应用自身的图标；Apple 的项目或没有应用图标的项目显示为圆角方框里的首字母。可以从 Hairpin 菜单里的 **Show Real Icons…** 授权。
-
-Hairpin 仅为检查和下载更新访问 GitHub，不发送菜单栏数据、截图、应用列表、统计数据或系统概况。GitHub 会接收 IP 地址、更新请求中的应用版本等常规网络信息。Hairpin 不记录按键，也不读取应用窗口的内容。授予屏幕录制后，它只截取菜单栏这一条来抠出图标形状，并读取菜单栏图标窗口的名称；图标形状只保存在内存里。
-
-### 更新
-
-默认每天检查一次更新，发现新版本时在发夹上显示小圆点。右键点击发夹，选择 **Check for Updates…** 或可用版本，即可查看说明并安装。
-
-**Update Automatically** 默认关闭。开启后会在后台下载经过验证的更新，并在退出 Hairpin 时安装；关闭后停止自动下载，每天检查仍然保留，也可以手动检查。更新窗口里仍可立即安装并重新启动。更新通过 Sparkle 校验 feed 和安装包的签名。0.2.3 及更早版本的用户需要手动安装一次支持更新的版本。
-
-### 使用
-
-- **展开**：鼠标在发卡上停留半秒（移开后收起），或者点击发卡（保持展开，直到点击别处、再点一次发卡或按 Esc）。
-- **顺序**：系统图标在最右边，其余按应用启动先后排列，越早启动越靠右，和菜单栏一致。
-- **Hairpin 菜单**：点击 Hairpin 自己的图标（它兼当发卡时用右键），或右键点击独立发卡，可以查看隐藏图标数量、权限、悬停与登录设置、更新控制及 **Quit Hairpin**。
-- **找不到 Hairpin？** 在它运行时再打开一次 Hairpin.app，被藏起来的图标会在鼠标指针处展开；没有图标被藏起来时，会弹出菜单。
-
-### 已知限制
-
-- Hairpin 不会移动图标，而是替你点击真实的图标。有些应用会在原来被藏起来的位置（刘海附近）弹出菜单，少数应用不响应点击，或者打开的是窗口。
-- 图标的样子是在它显示时截取的，会变化的内容（未读数、电量）显示的是最后一次可见时的状态。
-- 接了多块显示器时，只看带刘海的那块（没有刘海时看主屏）。
-- 只支持 Apple 芯片。
-
-技术细节见 [How Hairpin works](docs/how-it-works.md)。
-
-### 从源码构建
+Hairpin was formerly called NotchBar. If you cloned the old repository, update its remote:
 
 ```sh
-swift test               # 单元测试
-scripts/bundle.sh        # 生成 Hairpin.app 和 Hairpin.zip（ad-hoc 签名）
-scripts/dmg.sh           # 再生成 Hairpin.dmg
+git remote set-url origin https://github.com/HiAriesZhou/Hairpin.git
 ```
 
-需要 Xcode 或 Command Line Tools。ad-hoc 签名的构建每次重新打包后，系统授权都会失效；用 `SIGN_IDENTITY="Apple Development" scripts/bundle.sh` 以固定的证书签名，授权就能保留。
+</details>
 
----
+## Contributing and license
 
-## Contributing and security · 贡献与安全
+See [CONTRIBUTING.md](CONTRIBUTING.md) for pull requests and [SECURITY.md](SECURITY.md) for private security reports. Release procedures are in [docs/releasing.md](docs/releasing.md).
 
-Contributions are welcome through pull requests; see [CONTRIBUTING.md](CONTRIBUTING.md). Report security issues privately as described in [SECURITY.md](SECURITY.md).
-欢迎通过 PR 贡献，流程见 [CONTRIBUTING.md](CONTRIBUTING.md)；安全问题请按 [SECURITY.md](SECURITY.md) 私下报告。
-
-## License
-
-MIT, see [LICENSE](LICENSE). Written from scratch; no code from other menu bar managers. A copy ships inside the app at `Hairpin.app/Contents/Resources/LICENSE`.
+Created by AriesZhou. [MIT licensed](LICENSE), written from scratch with no code from other menu bar managers. A copy of the license ships inside the app.
