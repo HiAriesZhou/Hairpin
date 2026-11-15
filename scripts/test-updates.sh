@@ -8,7 +8,21 @@ APP="$TEST_DIR/UpdateTests.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Frameworks"
 FRAMEWORK=.build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64
 [[ -f Hairpin.app/Contents/Info.plist ]] || { echo 'error: run scripts/bundle.sh first' >&2; exit 1; }
-ditto "$FRAMEWORK/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
+# Compile against the SDK, but exercise the framework users actually receive.
+ditto Hairpin.app/Contents/Frameworks/Sparkle.framework "$APP/Contents/Frameworks/Sparkle.framework"
+APP_ARCHS="$(lipo -archs Hairpin.app/Contents/MacOS/Hairpin)"
+while IFS= read -r -d '' BINARY; do
+  if file -b "$BINARY" | grep -q 'Mach-O'; then
+    [[ "$(lipo -archs "$BINARY")" == "$APP_ARCHS" ]] || { echo "error: bundled architecture mismatch" >&2; exit 1; }
+  fi
+done < <(find Hairpin.app/Contents/Frameworks -type f -print0)
+for DIRECTORY in Headers PrivateHeaders Modules; do
+  for PREFIX in Hairpin.app/Contents/Frameworks/Sparkle.framework{,/Versions/B}; do
+    [[ ! -e "$PREFIX/$DIRECTORY" && ! -L "$PREFIX/$DIRECTORY" ]] || { echo "error: bundled development metadata" >&2; exit 1; }
+  done
+done
+[[ "$(dwarfdump --uuid Hairpin.app/Contents/MacOS/Hairpin | cut -d ' ' -f 2-3)" == \
+   "$(dwarfdump --uuid .build/Hairpin.dSYM | cut -d ' ' -f 2-3)" ]]
 swiftc Sources/Hairpin/Updates.swift Sources/Hairpin/HairpinIcon.swift Tests/UpdateIntegration/main.swift \
   -F "$FRAMEWORK" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
   -o "$APP/Contents/MacOS/UpdateTests"

@@ -69,6 +69,14 @@ jobs:
       - name: Bundle
         run: scripts/bundle.sh
 
+      - name: Preserve debug symbols
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Hairpin-debug-symbols
+          path: .build/Hairpin.dSYM
+          include-hidden-files: true
+          if-no-files-found: error
+
       - name: Update integration and feed validation
         run: scripts/test-updates.sh
 
@@ -177,6 +185,14 @@ jobs:
 
       - name: Bundle (signed)
         run: VERSION="${GITHUB_REF_NAME#v}" scripts/bundle.sh
+
+      - name: Preserve release debug symbols
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Hairpin-release-debug-symbols
+          path: .build/Hairpin.dSYM
+          include-hidden-files: true
+          if-no-files-found: error
 
       - name: Notarize app
         run: scripts/notarize.sh app
