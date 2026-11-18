@@ -367,7 +367,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem.button?.image = HairpinIcon.image(updateAvailable: hasUpdate,
                                                      badge: stack.usesButton ? hidden?.count : nil)
         statusItem.button?.toolTip = stack.usesButton
-            ? "Hairpin — click for hidden icons, right-click for settings" : "Hairpin"
+            ? "Click for hidden icons • Right-click for settings" : "Hairpin"
         if let version = updates.availableVersion {
             statusItem.button?.toolTip = "Hairpin \(version) available — right-click for updates"
         }
